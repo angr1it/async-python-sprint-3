@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import Dict
 import json
 import dataclasses
 import logging
@@ -47,7 +47,7 @@ class User:
 class UserStore:
 
     def __init__(self) -> None: 
-        self.store: dict[str, User] = dict()
+        self.store: Dict[str, User] = dict()
 
     def get_user(self, username: str) -> User:
         try:

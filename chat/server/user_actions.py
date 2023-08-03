@@ -1,16 +1,10 @@
-from typing import List, Dict, Tuple, Union
-from aiohttp import ClientWebSocketResponse
+from typing import Dict
 import logging
 from datetime import datetime
 import dataclasses
 from aiohttp import web
-from aiohttp.web_request import Request
 import aiofiles
 from datetime import datetime
-import asyncio
-import json
-
-import uuid
 
 logger = logging.getLogger()
 
@@ -18,8 +12,6 @@ from ..command_types import CommandType
 
 from ..exceptions import (
     UnsuitableCommand,
-    CommandArgError,
-    EmptyCommand,
     BadRequest,
 )
 
@@ -34,7 +26,6 @@ from .state.message import (
 )
 
 from .command import Command
-from .room_actions import JoinRoom
 
 INCORRECT_LOGIN_COMBINATION = 'Incorrect username or password.'
 REGISTER_FAIL = 'The specified username is already taken.'

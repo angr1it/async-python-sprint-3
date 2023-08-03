@@ -2,7 +2,6 @@ from datetime import datetime
 from enum import Enum
 
 from chat.command_types import CommandType
-from .server.state.room import RoomType
 
 
 

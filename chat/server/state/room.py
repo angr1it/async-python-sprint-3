@@ -3,6 +3,7 @@ from aiohttp import web
 from dataclasses import dataclass
 from enum import Enum
 import uuid
+from typing import List, Dict
 
 from ...singleton import singleton
 from .user import User
@@ -25,8 +26,8 @@ class Room:
     name: str
     room_type: RoomType
 
-    admins: list[str]
-    allowed: list[str]
+    admins: List[str]
+    allowed: List[str]
 
     deleted: bool
 
@@ -40,7 +41,7 @@ class Room:
 @singleton
 class RoomStore:
     def __init__(self) -> None:
-        self.store: dict[str, Room] = {}
+        self.store: Dict[str, Room] = {}
 
         global_room =Room(
             key=None,
@@ -53,12 +54,12 @@ class RoomStore:
 
         self.store[global_room.key] = global_room 
 
-        self.key_by_name: dict[str, str] = {}
+        self.key_by_name: Dict[str, str] = {}
         self.key_by_name[DEFAULT_ROOM] = global_room.key
 
-        self.private_keys: dict[frozenset, str] = {}
+        self.private_keys: Dict[frozenset, str] = {}
 
-        self.user_rooms: dict[str, list[str]] = {}
+        self.user_rooms: Dict[str, List[str]] = {}
 
     def __add_room_to_user(self, usename: str, room: Room) -> None:
         try:
@@ -76,7 +77,7 @@ class RoomStore:
         
         return username in room.allowed
     
-    def get_rooms_by_user(self, user: User) -> list[Room]:
+    def get_rooms_by_user(self, user: User) -> List[Room]:
         
         try:
             rooms_keys = self.user_rooms[user.username]

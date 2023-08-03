@@ -1,10 +1,9 @@
-import asyncio
 from pathlib import Path
-import asyncio
 import aiofiles
 from aiofiles.os import makedirs
 from pathlib import Path
 import json
+from typing import Dict
 
 async def write_file(filepath: str, data: str):
     dir = str(Path(filepath).parent)
@@ -12,7 +11,7 @@ async def write_file(filepath: str, data: str):
     async with aiofiles.open(file=filepath, mode='w') as f:
         await f.write(data)
 
-async def read_file(filepath) -> dict:
+async def read_file(filepath) -> Dict:
     
     async with aiofiles.open(file=filepath, mode='r') as f:
         data = await f.read()

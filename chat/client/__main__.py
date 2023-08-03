@@ -12,7 +12,6 @@ from .client_commands import (
     SendCommand, 
     QuitCommand, 
     JoinRoomCommand,
-    UserList,
     RegisterCommand,
     LoginCommand,
     LogoutCommand,

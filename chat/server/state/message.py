@@ -33,7 +33,7 @@ class Action(ABC):
     reason: str
 
     @abstractmethod
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         raise NotImplementedError('get_notification must be overrided in the child class!')
     
     def _command_type_check(self, expected: str):
@@ -79,7 +79,7 @@ class Login(UserAction):
     def __post_init__(self):
         self._command_type_check(CommandType.login)
     
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         return {'action': CommandType.login, 'success': self.success, 'datetime': str(self.datetime), 'user': self.user_name, 'reason': self.reason}
 
 @dataclass
@@ -88,7 +88,7 @@ class Logout(UserAction):
     def __post_init__(self):
         self._command_type_check(CommandType.logout)
     
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         return {'action': CommandType.logout, 'success': self.success, 'datetime': str(self.datetime), 'user': self.user_name, 'reason': self.reason}
     
 @dataclass
@@ -99,7 +99,7 @@ class Register(Action):
     def __post_init__(self):
         self._command_type_check(CommandType.register)
     
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         return {'action': CommandType.register, 'datetime': str(self.datetime),  'success': self.success, 'user': self.username, 'reason': self.reason}
 
 @dataclass
@@ -108,7 +108,7 @@ class FileLoaded(UserAction):
     def __post_init__(self):
         self._command_type_check(CommandType.publish_file)
     
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         return {'action': CommandType.publish_file, 'success': self.success, 'publisher': self.publisher}
 
 @dataclass
@@ -120,7 +120,7 @@ class FilePublished(UserAction):
     def __post_init__(self):
         self._command_type_check(CommandType.publish_file)
     
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         return {'action': CommandType.publish_file, 'publisher': self.publisher, 'key': self.key, 'datetime': self.datetime}
 
 @dataclass
@@ -131,20 +131,20 @@ class GetRoomHistory(Action):
     def __post_init__(self):
         self._command_type_check(CommandType.history)
     
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         return {'action': CommandType.history, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'messages': self.messages}
 
 @dataclass
 class CreateRoom(UserAction):
 
     room_name: str
-    admins: list[str]
-    allowed: list[str]
+    admins: List[str]
+    allowed: List[str]
 
     def __post_init__(self):
         self._command_type_check(CommandType.create_room)
 
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         return {'action': CommandType.create_room, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name, 'admins': self.admins, 'allowed': self.allowed}
 
 @dataclass
@@ -155,7 +155,7 @@ class CreateRoomAnon(Action):
     def __post_init__(self):
         self._command_type_check(CommandType.create_room)
 
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         return {'action': CommandType.create_room, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name}
 
 @dataclass
@@ -166,7 +166,7 @@ class DeleteRoom(UserAction):
     def __post_init__(self):
         self._command_type_check(CommandType.delete_room)
 
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         return {'action': CommandType.delete_room, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name}
 
 @dataclass
@@ -178,7 +178,7 @@ class AddUser(UserAction):
     def __post_init__(self):
         self._command_type_check(CommandType.add_user)
 
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         return {'action': CommandType.add_user, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name, 'new_user': self.new_user}
 
 @dataclass
@@ -190,7 +190,7 @@ class RemoveUser(UserAction):
     def __post_init__(self):
         self._command_type_check(CommandType.remove_user)
 
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         return {'action': CommandType.remove_user, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name, 'remove_user': self.remove_user}
 
 @dataclass
@@ -200,7 +200,7 @@ class ConnectAnon(Action):
     def __post_init__(self):
         self._command_type_check(CommandType.connected)
     
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         return {'action': CommandType.connected, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'name': self.name}
 
 @dataclass
@@ -209,7 +209,7 @@ class AnyError(Action):
     def __post_init__(self):
         self._command_type_check(CommandType.error)
 
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         return {'action': CommandType.error, 'datetime': str(self.datetime), 'reason': self.reason}
 
 @dataclass
@@ -218,7 +218,7 @@ class LeaveRoom(RoomAction):
     def __post_init__(self):
         self._command_type_check(CommandType.leave_room)
 
-    def get_notification(self) -> dict:
+    def get_notification(self) -> Dict:
         return {'action': CommandType.leave_room, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name, 'user_name': self.user_name}
 
 @singleton
@@ -253,7 +253,7 @@ class NotificationStore:
 
         self.store['other'].append(action)
 
-    async def __send(self, ws: web.WebSocketResponse, mssg: dict):
+    async def __send(self, ws: web.WebSocketResponse, mssg: Dict):
         await ws.send_json(mssg)
      
     async def process(self, ws: web.WebSocketResponse, notification: Action):
@@ -268,7 +268,7 @@ class NotificationStore:
         self.__add(notification)
         await self.__send(ws=ws, mssg=notification.get_notification())
 
-    def get_n_messages(self, room: Room, n: int = 20) -> list:
+    def get_n_messages(self, room: Room, n: int = 20) -> List:
         try:
             messages = [message.get_notification() for message in self.store['rooms'][room.key]][:n]
             return messages
