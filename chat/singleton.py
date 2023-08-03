@@ -1,7 +1,9 @@
-def singleton(class_):
-    instances = {}
-    def getinstance(*args, **kwargs):
-        if class_ not in instances:
-            instances[class_] = class_(*args, **kwargs)
-        return instances[class_]
+def singleton(cls):
+
+    def getinstance():
+        if cls not in singleton.instances:
+            singleton.instances[cls] = cls()
+        return singleton.instances[cls]
     return getinstance
+
+singleton.instances = {}

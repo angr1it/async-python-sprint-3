@@ -8,14 +8,15 @@ from aiohttp.http_websocket import WSMessage
 from aiohttp.web import WSMsgType
 
 from .client_commands import (
-    History,
+    HistoryCommand,
     SendCommand, 
     QuitCommand, 
-    JoinRoom,
+    JoinRoomCommand,
     UserList,
-    Register,
-    Login,
-    Logout
+    RegisterCommand,
+    LoginCommand,
+    LogoutCommand,
+    PublishFile
 )
 from .client_commands import (
     CommandArgError, 
@@ -36,10 +37,7 @@ async def subscribe_to_messages(websocket: ClientWebSocketResponse) -> None:
     async for message in websocket:
         if isinstance(message, WSMessage):
             if message.type == WSMsgType.text:
-                message_json = message.json()
-                if message_json.get('action') == '/send' and not message_json.get('success'):
-                    print(f'>>>{message_json["user"]}: {message_json["message"]}')
-                logger.info('> Message from server received: %s', message_json)
+                logger.info('> Message from server received: %s', message.json())
 
 async def ping(websocket: ClientWebSocketResponse) -> None:
     """
@@ -67,7 +65,7 @@ async def handle_input(websocket: ClientWebSocketResponse, input: Coroutine[str,
     :param input: Coroutine that handles inputs -- yields str
     :return:
     """
-    commands = [SendCommand, QuitCommand, JoinRoom, UserList, History, Register, Login, Logout]
+    commands = [SendCommand, HistoryCommand]
 
     while True:
         message = await input()
@@ -116,7 +114,7 @@ async def handler(nick: str = None, room: str = None) -> None:
             ping_task = asyncio.create_task(ping(websocket=ws))
             send_input_message_task = asyncio.create_task(handle_input(websocket=ws))
 
-            await UserList.run(ws, '/user_list')
+            #await UserList.run(ws, '/user_list')
             # This function returns two variables, a list of `done` and a list of `pending` tasks.
             # We can ask it to return when all tasks are completed, first task is completed or on first exception
             done, pending = await asyncio.wait(

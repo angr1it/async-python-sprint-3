@@ -1,24 +1,43 @@
 import logging
 import random
 from collections import defaultdict
-
+import asyncio
+from datetime import datetime
 from aiohttp import web
 from aiohttp.http_websocket import WSCloseCode, WSMessage
 from aiohttp.web_request import Request
+import uuid
 
-from .utils import broadcast, get_anonymous_nick
-from .server_actions import (
-    History,
+from .room_actions import (
     JoinRoom,
-    UserList,
-    Send,
+    LeaveRoom,
+    CreateRoom,
+    DeleteRoom,
+    AddUser,
+    RemoveUser
+)
+from .user_actions import (
     Register,
     Login,
     Logout
 )
+from .message_actions import (
+    Send,
+    History,
+)
+
+from .state.meta import Meta
+from .state.user import (
+    UserStore
+)
+from .state.message import (
+    NotificationStore,
+    ConnectAnon,
+    AnyError
+)
+
 from ..exceptions import *
-from .actions import ActionMessages
-from .meta import Meta
+from ..command_types import CommandType
 
 
 logging.basicConfig(level=logging.INFO)
@@ -51,7 +70,6 @@ async def ws_echo(request: Request) -> web.WebSocketResponse:
 
     return websocket
 
-
 async def ws_chat(request: Request) -> web.WebSocketResponse:
     """
     Chat backend. Add it to the route like this:
@@ -67,56 +85,65 @@ async def ws_chat(request: Request) -> web.WebSocketResponse:
         await current_websocket.close(code=WSCloseCode.PROTOCOL_ERROR)
     await current_websocket.prepare(request)
 
-    room = 'Global'
+    username = UserStore().get_anonymus_name()
+    meta = Meta(uuid.uuid5, username, False)
 
-    user = get_anonymous_nick()
-    logger.info('%s connected to room %s', user, room)
+    await NotificationStore().process(
+        ws=current_websocket,
+        notification=ConnectAnon(
+            action=CommandType.connected,
+            datetime=datetime.now(),
+            success=True,
+            reason='',
+            name=meta.user_name,
+            expired=False
+        )
+    )
 
-    await current_websocket.send_json(ActionMessages.connecting(user, room))
+    request.app['websockets'][meta.key] = current_websocket
 
-    # Check that the user does not exist in the room already
-    # if request.app['websockets'][room].get(user):
-    #     logger.warning('User already connected. Disconnecting.')
-    #     await current_websocket.close(code=WSCloseCode.TRY_AGAIN_LATER, message=b'Username already in use')
-    #     return current_websocket
-    # else:
-
-    request.app['websockets'][room][user] = current_websocket
-    
-    for ws in request.app['websockets'][room].values():
-        await ws.send_json(ActionMessages.join_room(username=user, room=room, success=True, message=''))
-
-    commands = [JoinRoom, UserList, Send, History, Register, Login, Logout]
-
-    meta = Meta(user, room, False)
+    commands = {}
+    commands[CommandType.send] = Send
+    commands[CommandType.history] = History
 
     try:
         async for message in current_websocket:
             if isinstance(message, WSMessage):
                 if message.type == web.WSMsgType.text:
                     
-                    message_json = message.json()
-                    command_str = message_json.get('command')
+                    try:
+                        message_json = message.json()
+                        command_str = message_json.get('command')
                     
-                    for command in commands:
-                        try:
-                            meta = await command.run(request = request, ws_response = current_websocket, meta = meta, command = command_str, message_json = message_json)
-                        except UnsuitableCommand:
-                            continue
+                        meta = await commands[command_str].run(ws_response = current_websocket, meta = meta, command = command_str, message_json = message_json)
+                    except BadRequest:
+                        await NotificationStore().process(
+                            ws=current_websocket, 
+                            notification=AnyError(CommandType.error, datetime.now(), expired=False, success=False, reason='Bad request.')
+                        )
+                    except NoRegistredUserFound:
+                        await NotificationStore().process(
+                            ws=current_websocket, 
+                            notification=AnyError(CommandType.error, datetime.now(), expired=False, success=False, reason='Cannot apply this operation to anonymus user.')
+                        )
+                    except:
+                        await NotificationStore().process(
+                            ws=current_websocket, 
+                            notification=AnyError(CommandType.error, datetime.now(), expired=False, success=False, reason='Unknown error.')
+                        )
     
     finally:
-        request.app['websockets'][room].pop(user)
+        request.app['websockets'].pop(meta.key)
     
-    if current_websocket.closed:
+    """if current_websocket.closed:
         await broadcast(
-            app=request.app, room=room, message=ActionMessages.left_room(user, room, False)
+            app=request.app, room=room, message=ActionMessages.left_room(username, room, False)
         )
     else:
         await broadcast(
-            app=request.app, room=room, message=ActionMessages.left_room(user, room, True)
-        )
+            app=request.app, room=room, message=ActionMessages.left_room(username, room, True)
+        )"""
     return current_websocket
-
 
 async def init_app() -> web.Application:
     """
@@ -126,14 +153,20 @@ async def init_app() -> web.Application:
     app = web.Application()
     app['websockets'] = defaultdict(dict)
 
-    app.on_shutdown.append(shutdown)  # Shut down connections before shutting down the app entirely
-    app.add_routes([web.get('/echo', handler=ws_echo)])  # `ws_echo` handles this request.
-    app.add_routes([web.get('/chat', handler=ws_chat)])  # `ws_chat` handles this request
+    await NotificationStore().load()
+    await UserStore().load()
 
+    app.on_shutdown.append(shutdown)
+    app.add_routes([web.get('/echo', handler=ws_echo)])
+    app.add_routes([web.get('/chat', handler=ws_chat)])  
+    app.update()
     return app
 
-
 async def shutdown(app):
+    # CTRL+C in order to save the data on app close
+    await NotificationStore().dump()
+    await UserStore().dump()
+
     for room in app['websockets']:
         for ws in app['websockets'][room].values():
             ws.close()

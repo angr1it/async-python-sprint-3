@@ -2,6 +2,6 @@ from dataclasses import dataclass
 
 @dataclass
 class Meta:
-    username: str
-    room: str
+    key: str
+    user_name: str
     loggedin: bool
