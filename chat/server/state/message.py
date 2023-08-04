@@ -7,15 +7,17 @@ from pydantic.dataclasses import dataclass
 from pydantic.tools import parse_obj_as
 import dataclasses
 import json
-import uuid
 
 from ...singleton import singleton
 from ...command_types import CommandType
 
 from .room import Room, RoomStore
 from .user import UserStore, User
-from ...exceptions import *
-from ..manage_files import read_file, write_file, to_dict
+from ...exceptions import (
+    NoRegistredUserFound,
+    NoRoomFound
+)
+from ...manage_files import read_file, write_file
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

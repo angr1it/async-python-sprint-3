@@ -1,60 +1,48 @@
 import logging
-import asyncio
-from datetime import datetime
 from aiohttp import web
-
+from dataclasses import dataclass
 import uuid
-import aiofiles
+from typing import Dict
 
 from ...singleton import singleton
-from ...command_types import CommandType
-from .message import NotificationStore, FileLoaded
-
+from ...manage_files import receive_file
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+@dataclass
+class File:
+
+    key: str
+    path: str
+    name: str
 
 
 
 @singleton
 class FileStore:
-
-    @staticmethod
-    async def __receive_file(ws: web.WebSocketResponse, dir: str, filename: str, timeout: float = 0.1):
-        await aiofiles.os.makedirs(dir, exist_ok=True)
-        async with aiofiles.open(dir + '/' + filename, 'wb') as f:
-            while True:
-                chunk = await ws.receive_bytes(timeout=timeout)
-
-                while isinstance(chunk, bytes):
-                    await f.write(chunk)
-                    try:
-                        chunk = await ws.receive_bytes(timeout=timeout)
-
-                    except asyncio.exceptions.TimeoutError:
-                        logger.info(f'File saved {dir}/{filename}')
-                        return
+    
+    def __init__(self) -> None:
         
-    async def publish_file(self, filename: str, ws_response: web.WebSocketResponse, app: web.Application) -> bool:
+        self.store: Dict[str, File] = {}
+
+    def get_file(self, key: str) -> File:
+        try:
+            return self.store[key]
+        except KeyError:
+            return None
+        
+    async def publish_file(self, filename: str, ws_response: web.WebSocketResponse) -> File:
         
         key = str(uuid.uuid4())
         dir = './server_data/' + key
 
-        success = await FileStore.__receive_file(ws=ws_response, dir=dir, filename=filename)
+        success = await receive_file(ws=ws_response, dir=dir, filename=filename)
         if success:
-            NotificationStore().process(
-                app=app,
-                notification=FileLoaded(CommandType.publish_file, datetime.now(), True, '')
-            )
+            self.store[key] = File(key=key, path=f'{dir}/{filename}', name=filename)
+            return self.store[key]
 
-            return True
-        
-        NotificationStore().process(
-            app=app,
-            notification=FileLoaded(CommandType.publish_file, datetime.now(), False, 'Unknown.')
-        )
-
-        return False
+        return None
     
     async def load_file(self):
         pass

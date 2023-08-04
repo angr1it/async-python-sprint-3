@@ -16,12 +16,14 @@ from .state.message import (
 )
 from .state.room import RoomStore
 
-from ..exceptions import *
-from ..command_types import CommandType
+from ..exceptions import (
+    BadRequest,
+    NoRegistredUserFound
+)
 from .get_commands import init_commands
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('server')
 
 
 async def ws_echo(request: Request) -> web.WebSocketResponse:
@@ -97,11 +99,11 @@ async def ws_chat(request: Request) -> web.WebSocketResponse:
                             ws=current_websocket,
                             notification=get_error_message(reason='Cannot apply this operation to anonymus user.')
                         )
-                    """except:
+                    except:
                         await NotificationStore().process(
                             ws=current_websocket,
                             notification=get_error_message(reason='Unknown error.')
-                        )"""
+                        )
     
     finally:
         request.app['websockets'].pop(meta.key)

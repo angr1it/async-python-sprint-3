@@ -7,27 +7,20 @@ from aiohttp import ClientSession, ClientWebSocketResponse
 from aiohttp.http_websocket import WSMessage
 from aiohttp.web import WSMsgType
 
-from .client_commands import (
-    HistoryCommand,
-    SendCommand, 
-    QuitCommand, 
-    JoinRoomCommand,
-    RegisterCommand,
-    LoginCommand,
-    LogoutCommand,
-    PublishFileCommand
-)
+
 from .client_commands import (
     CommandArgError, 
     EmptyCommand,
-    UnsuitableCommand
 )
 from ..command_types import CommandType
+from ..manage_files import receive_file
 
 from .get_commands import init_commands
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('client')
 
+DOWNLOADS_FOLDER = './client_data/downloads'
 
 async def subscribe_to_messages(websocket: ClientWebSocketResponse) -> None:
     """
@@ -39,18 +32,21 @@ async def subscribe_to_messages(websocket: ClientWebSocketResponse) -> None:
     async for message in websocket:
         if isinstance(message, WSMessage):
             if message.type == WSMsgType.text:
-                logger.info('> Message from server received: %s', message.json())
+                data = message.json()
+                logger.info('> Message: %s', data)
+
+                try:
+                    if data['action'] == CommandType.load_file and data['success']:
+                        await receive_file(ws=websocket, dir=DOWNLOADS_FOLDER, filename=data['payload']['filename'])
+
+                        logger.info('Loaded.')
+
+                except Exception as ex:
+                    logger.error(ex)
+                    logger.info('File was lost somehow...')
 
 async def ping(websocket: ClientWebSocketResponse) -> None:
-    """
-    A function that sends a PING every minute to keep the connection alive.
 
-    Note that you can do this automatically by simply using `autoping=True` and `heartbeat`. 
-    This is implemented as an example.
-    
-    :param websocket: Websocket connection
-    :return: None, forever living task
-    """
     while True:
         logger.debug('< PING')
         await websocket.ping()

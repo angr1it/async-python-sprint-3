@@ -4,21 +4,17 @@ from aiohttp import web
 
 
 from ..command_types import CommandType
-
 from ..exceptions import (
     UnsuitableCommand,
-    CommandArgError,
-    EmptyCommand,
     BadRequest,
     NoRegistredUserFound,
-    UnknownError
 )
-
 from .state.meta import Meta
 from .state.room import RoomStore
 from .state.user import UserStore
 from .state.message import NotificationStore, get_message_notification
 from .command import Command
+
 
 logger = logging.getLogger()
 

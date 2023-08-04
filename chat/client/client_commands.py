@@ -1,12 +1,10 @@
 from typing import List
 from aiohttp import ClientWebSocketResponse
 import logging
-from asyncio import StreamReader, StreamWriter
-from asyncio import streams
 import os
 
-import aiofiles
 
+from ..manage_files import send_file
 
 from ..command_types import CommandType
 from ..exceptions import (
@@ -28,6 +26,8 @@ REGISTER_PARSE_ERR = '/register <username> <password> --required format'
 LOGIN_PARSE_ERR = '/login <username> <key> --required format'
 PUBLISH_FILE_PARSE_ERR = '/publish_file <path> [user1] [user2]...[usern] --required format'
 
+
+
 class Command:
     @classmethod
     def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
@@ -38,6 +38,16 @@ class Command:
         if len(command) == 0:
             raise EmptyCommand(f'{cls.__name__}: command is empty!')
 
+class HelpCommand(Command):
+    @classmethod
+    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+        super().run(websocket, command)
+
+        if not command == CommandType.help:
+            raise UnsuitableCommand
+        
+        logger.info(CommandType.__doc__)
+        
 class SendCommand(Command):
     @classmethod
     async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
@@ -93,14 +103,18 @@ class HistoryCommand(Command):
         if content is None or content == '':
             content = ''
         
+        # Больно смотреть... Вроде работает
         try:
-            room, n_str = content.split(' ', 1)
+            n_str, room = content.split(' ', 1)
             n = int(n_str)
         except ValueError as ex:
             try:
                 n = int(content)
             except:
-                pass
+                try:
+                    room = content.replace(' ', '')
+                except:
+                    pass
         
         await websocket.send_json({'command': command, 'room': room, 'n': n})
 
@@ -269,13 +283,6 @@ class DeleteDialogueCommand(Command):
 
 class PublishFileCommand(Command):
 
-    async def __sender(ws: ClientWebSocketResponse, path: str):
-        async with aiofiles.open(path, 'rb') as f:
-            chunk = await f.read(2 ** 16)
-            while isinstance(chunk, bytes):
-                await ws.send_bytes(chunk)
-                chunk = f.read(2 ** 16)
-
     @classmethod
     async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
         super().run(websocket, command)
@@ -283,25 +290,15 @@ class PublishFileCommand(Command):
         if not command == CommandType.publish_file:
             raise UnsuitableCommand
         
-        try:
-            path, options = content.split(' ', 1)
-        except:
-            logger.info(PUBLISH_FILE_PARSE_ERR)
+        if not os.path.isfile(path=content):
+            logger.error(f'/publish_file: File does not exist!')
             return
-        
-        try:
-            usernames = options.split(' ')
-        except:
-            usernames = []
 
-        if not os.path.isfile(path=path):
-            logger.error(f'File does not exist!')
-
-        filename = os.path.basename(path)
+        filename = os.path.basename(content)
         
-        await websocket.send_json({'command': command, 'usernames': usernames, 'filename': filename})
+        await websocket.send_json({'command': command, 'filename': filename})
         
-        await PublishFileCommand.__sender(ws=websocket, path=path)
+        await send_file(ws=websocket, path=content)
 
 class LoadFileCommand(Command):
 
@@ -309,7 +306,7 @@ class LoadFileCommand(Command):
     async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
-        if not command == CommandType.publish_file:
+        if not command == CommandType.load_file:
             raise UnsuitableCommand
-        
-        return
+
+        await websocket.send_json({'command': command, 'key': content})

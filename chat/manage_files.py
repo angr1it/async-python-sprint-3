@@ -5,8 +5,11 @@ from pathlib import Path
 import json
 from typing import Dict
 import dataclasses
-from uuid import UUID
+from aiohttp import web
+import logging
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 async def write_file(filepath: str, data: str):
     dir = str(Path(filepath).parent)
@@ -28,3 +31,16 @@ def to_dict(data: Dict[str, dataclasses.dataclass]):
 
     return out
 
+async def receive_file(ws: web.WebSocketResponse, dir: str, filename: str, timeout: float = 0.1):
+    await aiofiles.os.makedirs(dir, exist_ok=True)
+    async with aiofiles.open(dir + '/' + filename, 'wb') as f:
+        chunk = await ws.receive_bytes(timeout=timeout)
+        await f.write(chunk)
+
+        return True
+
+                
+async def send_file(ws: web.WebSocketResponse, path: str):
+    async with aiofiles.open(path, 'rb') as f:
+        chunk = await f.read(2 ** 16)
+        await ws.send_bytes(chunk)

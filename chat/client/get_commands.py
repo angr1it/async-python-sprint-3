@@ -17,13 +17,16 @@ from .client_commands import (
     LoadFileCommand,
     PublishFileCommand,
     DeleteDialogueCommand,
-    SendPrivateCommand
+    SendPrivateCommand,
+    HelpCommand,
+    QuitCommand
 )
 from ..command_types import CommandType
 
 def init_commands() -> Dict[CommandType, Command]:
     commands: Dict[Command] = {}
 
+    commands[CommandType.help] = HelpCommand
 
     commands[CommandType.send] = SendCommand
     commands[CommandType.send_private] = SendPrivateCommand
@@ -45,4 +48,5 @@ def init_commands() -> Dict[CommandType, Command]:
     commands[CommandType.load_file] = LoadFileCommand
     commands[CommandType.publish_file] = PublishFileCommand
 
+    commands[CommandType.quit] = QuitCommand
     return commands

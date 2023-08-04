@@ -1,45 +1,54 @@
 from enum import Enum
 
-
 class CommandType(str, Enum):
       
     """
     Commands: 
-    TODO: NEED TO UPDATE
 
-    -- Commands/arguments separated by one space;
+    -- Commands/arguments separated by one space; <> - required, [] -optional
 
-    `/send <message>` : sends a public message visible inside of current room;
+    `/send <room_name> <message>` : sends a public message visible inside of current room;
 
-    `/send_to <username> <message>`: sends a private message to a specified username;
+    `/send_private <username> <message>`: sends a private message to a specified username; need to /open_dialogue before using this;
+    
+    `/history [n] [room_name]` : returns last n messages available inside of current room; n = 20 by default; if no room_name passed -- returns user's action history if loggedin.
 
-    `/quit` : quits application;
+    `/create_room <room_name> <room_type := (/open or /restricted)>` : creates a room with current user as admin (need to be logged in);
 
-    `/join_room <room>` : attemps to join specified room;
+    `/delete_room <room_name>` : deletes the room if current user is admin;
 
-    `/register` : returns user list for current room;
+    `/add_user <room_name> <user_name>` : adds user to allowed list (for /restricted room); this user needs to be registred; for admins;
 
-    `/register <username> <key>` : registers (username, key) combination;
+    `/remove_user <room_name> <user_name>` : removes user from the room and allowed list; for admins;
 
-    `/login <username> <key>` : attemps to login under specified (username, key) combination;
+    `/join_room <room_name>` : attemps to join specified room; /open -- opened for all; /restricted -- allowed list;
+
+    `/leave_room <room_name>` : leaves the room;
+
+    `/open_dialogue <user_name>` : tryes to open private chat with user;
+
+    `/delete_dialogue <user_name>` : deletes private chat with user;
+
+    `/register <username> <password>` : registers (username, password) combination;
+
+    `/login <username> <password>` : attemps to login under specified (username, password) combination;
 
     `/logout` : logs out current user;
 
-    `/history [n]` : returns last n messages available inside of current room; n = 20 by default;
+    `/quit` : quits application;
 
-    `/publish_file <path> [username1] [username2] ... [usernamen]` : uploads file to server; notifies users if specified; returns has-key to load it;
+    `/publish_file <path>` : uploads file to server;
 
-    `/load_file <hash-key>` : tries to load a file with specified hash-key;
+    `/load_file <key>` : tries to load a file with specified key;
 
     `/help` : returns this doc.
     
     """
+
     send = '/send'
     send_private = '/send_private'
     
     history = '/history'
-
-
 
     create_room = '/create_room'
     delete_room = '/delete_room'
@@ -67,36 +76,3 @@ class CommandType(str, Enum):
     error = '/error'
 
     quit = '/quit'
-
-    """
-    Distribution (roughtly):
-
-    NotificationStore:
-        send = '/send'
-        history
-    
-    
-    FileStore:
-        publish_file
-        load_file
-
-    
-    UserStore:
-        login
-        logout
-        register
-
-    RoomStore:
-        create_room
-        delete_room
-        add_user
-        remove_user
-        join_room
-        leave_room
-        start_private (create_room private = true)
-        user_list
-
-    help
-
-    """
-    

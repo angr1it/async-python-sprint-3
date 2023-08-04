@@ -1,9 +1,7 @@
 from typing import Dict
 import logging
 from datetime import datetime
-import dataclasses
 from aiohttp import web
-import aiofiles
 from datetime import datetime
 
 logger = logging.getLogger()
@@ -16,7 +14,6 @@ from ..exceptions import (
 )
 
 from .state.meta import Meta
-from .state.room import RoomStore
 from .state.user import UserStore
 from .state.message import (
     NotificationStore,

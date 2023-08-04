@@ -20,7 +20,7 @@ class SendRequests(Enum):
     SEND_PRIVATE_JSON_REQ = {'command': '/send', 'message': 'hello', 'room': '', 'private': True, 'to_user': 'user2'}
 
 class HistoryRequests(Enum):
-    HISTORY_COMMAND = 'Global 1'
+    HISTORY_COMMAND = '1 Global'
     HISTORY_JSON_REQ = {'command': '/history', 'room': 'Global', 'n': 1}
     HISTORY_JSON_RESP = {
         'action': CommandType.history, 'success': True, 'reason': '', 'datetime': test_dt, 'user': 'andre', 

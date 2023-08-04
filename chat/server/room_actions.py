@@ -1,36 +1,25 @@
-from typing import List, Dict, Tuple, Union
-from aiohttp import ClientWebSocketResponse
+from typing import Dict
 import logging
 from datetime import datetime
 import dataclasses
 from aiohttp import web
-from aiohttp.web_request import Request
-import aiofiles
 from datetime import datetime
-import asyncio
-import json
-
 import uuid
 
 logger = logging.getLogger()
 
 from ..command_types import CommandType
-
 from ..exceptions import (
     UnsuitableCommand,
     BadRequest,
     DialogueOpenedAlready,
-    UnknownError,
     NoRegistredUserFound,
     NotAuthorized,
     NoRoomFound,
-    NoRoomAccessError
 )
-
 from .state.meta import Meta
 from .state.room import RoomStore, Room, RoomType
 from .state.user import UserStore
-
 from .state.message import (
     NotificationStore,
     UserAction

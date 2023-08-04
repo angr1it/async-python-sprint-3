@@ -2,11 +2,10 @@ from dataclasses import dataclass
 from typing import Dict
 import json
 import logging
-from aiohttp import web
 import uuid
 
 from ...singleton import singleton
-from ..manage_files import write_file, read_file, to_dict
+from ...manage_files import write_file, read_file, to_dict
 from ...command_types import CommandType
 
 from ...exceptions import (
