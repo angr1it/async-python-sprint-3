@@ -2,9 +2,6 @@ from typing import Dict
 import logging
 from aiohttp import web
 
-
-from ..command_types import CommandType
-
 from .state.meta import Meta
 
 
