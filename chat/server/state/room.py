@@ -87,7 +87,7 @@ class RoomStore:
         except:
             raise NotImplementedError
 
-    def user_in_room(self, user: User, room: Room) -> bool:
+    def user_in_room(self, username: str, room: Room) -> bool:
         """
         Supposed to be called every time, user trying to write in room.
         """
@@ -95,7 +95,7 @@ class RoomStore:
             return True
         
         try:
-            if room.key in self.user_rooms[user.username]:
+            if room.key in self.user_rooms[username]:
                 return True
         except:
             return False
@@ -150,12 +150,12 @@ class RoomStore:
     def delete_room(self, room: Room, admin: User) -> bool:
         
         if not self.user_is_admin(room=room, user=admin):
-            return False
+            raise NotAuthorized
         
         room.deleted = True
 
         if room.room_type == RoomType.private:
-            del self.private_keys[frozenset(room.admins[0], room.admins[1])]
+            del self.private_keys[frozenset((room.admins[0], room.admins[1]))]
         else:
             del self.key_by_name[room.name]
         
@@ -232,7 +232,7 @@ class RoomStore:
             key_room = self.private_keys[pair]
             return self.store[key_room]
         except:
-            raise NotImplementedError
+            return None
 
     def join(self, user: User, room: Room) -> bool:
         """

@@ -8,9 +8,9 @@ from chat.server.state.user import (
     UserStore
 )
 from chat.server.user_actions import (
-    Register,
-    Login,
-    Logout
+    RegisterAction,
+    LoginAction,
+    LogoutAction
 )
 
 from chat.command_types import CommandType
@@ -39,7 +39,7 @@ class TestServerActions(aiounittest.AsyncTestCase):
     @freeze_time(test_dt_str)
     async def test_register(self):
 
-        await Register().run(
+        await RegisterAction().run(
             ws_response=self.mock_ws,
             meta = self.meta,
             command=CommandType.register,
@@ -51,14 +51,14 @@ class TestServerActions(aiounittest.AsyncTestCase):
     @freeze_time(test_dt_str)
     async def test_login_logout(self):
 
-        await Register().run(
+        await RegisterAction().run(
             ws_response=self.mock_ws,
             meta = self.meta,
             command=CommandType.register,
             message_json=RegisterRequests.REGISTER_JSON_REQ.value
         )
 
-        await Login().run(
+        await LoginAction().run(
             ws_response=self.mock_ws,
             meta = self.meta,
             command=CommandType.login,
@@ -68,7 +68,7 @@ class TestServerActions(aiounittest.AsyncTestCase):
         self.assertFalse(self.meta.loggedin)
         self.assertIsNone(self.mock_ws.send_json.assert_called_with(LoginRequests.LOGIN_JSON_RESP_BAD.value))
 
-        await Login().run(
+        await LoginAction().run(
             ws_response=self.mock_ws,
             meta = self.meta,
             command=CommandType.login,
@@ -79,7 +79,7 @@ class TestServerActions(aiounittest.AsyncTestCase):
         self.assertEqual(LoginRequests.LOGIN_JSON_REQ.value['username'], self.meta.user_name)
         self.assertIsNone(self.mock_ws.send_json.assert_called_with(LoginRequests.LOGIN_JSON_RESP.value))
 
-        await Login().run(
+        await LoginAction().run(
             ws_response=self.mock_ws,
             meta = self.meta,
             command=CommandType.login,
@@ -91,7 +91,7 @@ class TestServerActions(aiounittest.AsyncTestCase):
         self.assertIsNone(self.mock_ws.send_json.assert_called_with(LoginRequests.LOGIN_JSON_RESP_AGAIN.value))
 
 
-        await Logout().run(
+        await LogoutAction().run(
             ws_response=self.mock_ws,
             meta = self.meta,
             command=CommandType.logout,

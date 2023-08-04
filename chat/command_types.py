@@ -49,9 +49,7 @@ class CommandType(str, Enum):
     leave_room = '/leave_room'
 
     open_dialogue = '/open_dialogue'
-
-    user_list = '/user_list'
-   
+    delete_dialogue = '/delete_dialogue'
 
     register = '/register'
     login = '/login'

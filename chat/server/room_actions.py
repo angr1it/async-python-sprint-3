@@ -18,12 +18,13 @@ from ..command_types import CommandType
 
 from ..exceptions import (
     UnsuitableCommand,
-    CommandArgError,
-    EmptyCommand,
     BadRequest,
     DialogueOpenedAlready,
     UnknownError,
-    NoRegistredUserFound
+    NoRegistredUserFound,
+    NotAuthorized,
+    NoRoomFound,
+    NoRoomAccessError
 )
 
 from .state.meta import Meta
@@ -32,20 +33,27 @@ from .state.user import UserStore
 
 from .state.message import (
     NotificationStore,
-    CreateRoom as CreateRoomNotification,
-    CreateRoomAnon as CreateRoomAnonNotification,
-    DeleteRoom as DeleteRoomNotification,
-    AddUser as AddUserNotification,
-    RemoveUser as RemoveUserNotification,
-    JoinRoom as JoinRoomNotification,
-    LeaveRoom as LeaveRoomNotification
+    CreateRoomNotification,
+    CreateRoomAnonNotification,
+    DeleteRoomNotification,
+    AddUserNotification,
+    RemoveUserNotification,
+    JoinRoomNotification,
+    LeaveRoomNotification,
+    OpenDialogueNotification,
+    DeleteDialogueNotification
 )
 from .command import Command
 
 NO_AUTH = 'Not authorized.'
 NOT_ALLOWED_TO_JOIN = 'Not allowed to join this room.'
 NOT_ALLOWED = 'Not allowed.'
-class JoinRoom(Command):
+DIALOGUE_OPENED_ERR = 'Dialogue opened already.'
+NO_DIALOGUE = 'No dialogue found.'
+
+
+
+class JoinRoomAction(Command):
     
     @classmethod
     async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
@@ -92,7 +100,7 @@ class JoinRoom(Command):
 
         return meta
 
-class LeaveRoom(Command):
+class LeaveRoomAction(Command):
     @classmethod
     async def run(cls,ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.leave_room:
@@ -104,7 +112,7 @@ class LeaveRoom(Command):
             raise BadRequest
         
         if RoomStore().user_in_room(
-            user=UserStore().get_user(meta.user_name),
+            username=meta.user_name,
             room=RoomStore().get_room_by_name(room_name)
         ):
             await NotificationStore().process(
@@ -126,9 +134,9 @@ class LeaveRoom(Command):
 
             return meta
         else:
-            raise UnknownError
+            raise NoRegistredUserFound
 
-class CreateRoom(Command):
+class CreateRoomAction(Command):
     @classmethod
     async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.create_room:
@@ -159,66 +167,81 @@ class CreateRoom(Command):
 
             return meta
 
-        try:
-            room = RoomStore().add_room(
-                room=Room(
-                    key=uuid.uuid4(),
-                    name=room_name,
-                    room_type=room_type,
-                    admins=[meta.user_name],
-                    allowed=[meta.user_name],
-                    deleted=False
-                )
+        room = RoomStore().add_room(
+            room=Room(
+                key=uuid.uuid4(),
+                name=room_name,
+                room_type=room_type,
+                admins=[meta.user_name],
+                allowed=[meta.user_name],
+                deleted=False
             )
-            
-            await NotificationStore().process(
-                ws=ws_response,
-                notification=CreateRoomNotification(
-                    action=CommandType.create_room,
-                    datetime=datetime.now(),
-                    expired=False,
-                    success=True,
-                    reason='',
-                    user_name=meta.user_name,
-                    room_name=room.name,
-                    admins=room.admins,
-                    allowed=room.allowed
-                )
+        )
+        
+        await NotificationStore().process(
+            ws=ws_response,
+            notification=CreateRoomNotification(
+                action=CommandType.create_room,
+                datetime=datetime.now(),
+                expired=False,
+                success=True,
+                reason='',
+                user_name=meta.user_name,
+                room_name=room.name,
+                admins=room.admins,
+                allowed=room.allowed
             )
-        except:
-            raise UnknownError
+        )
+
         
         return meta
 
-class DeleteRoom(Command):
+class DeleteRoomAction(Command):
     @classmethod
-    async def run(cls, request: Request, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.delete_room:
             raise UnsuitableCommand
         
         try:
             room_name = message_json['room_name']
         except:
-            # send the message, return
-            raise NotImplementedError
+            raise BadRequest
         
         try:
             RoomStore().delete_room(
-                app=request.app,
                 room=RoomStore().get_room_by_name(room_name=room_name),
                 admin=UserStore().get_user(username=meta.user_name)
             )
 
-            NotificationStore().process(
-                app=request.app,
-                notification=DeleteRoomNotification(CommandType.delete_room, datetime.now(), meta.user_name, True, '', room_name)
+            await NotificationStore().process(
+                ws=ws_response,
+                notification=DeleteRoomNotification(
+                    action=CommandType.delete_room,
+                    datetime=datetime.now(),
+                    expired=False,
+                    success=True,
+                    reason='',
+                    user_name=meta.user_name,
+                    room_name=room_name
+                )
             )
-        except:
-            raise NotImplementedError
+        except (NotAuthorized, NoRegistredUserFound):
+            await NotificationStore().process(
+                ws=ws_response,
+                notification=DeleteRoomNotification(
+                    action=CommandType.delete_room,
+                    datetime=datetime.now(),
+                    expired=False,
+                    success=False,
+                    reason=NO_AUTH,
+                    user_name=meta.user_name,
+                    room_name=room_name
+                )
+            )
         
         return meta
     
-class AddUser(Command):
+class AddUserAction(Command):
     @classmethod
     async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.add_user:
@@ -282,7 +305,7 @@ class AddUser(Command):
         
         return meta
 
-class RemoveUser(Command):
+class RemoveUserAction(Command):
     @classmethod
     async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.remove_user:
@@ -335,52 +358,150 @@ class RemoveUser(Command):
         
         return meta
 
-class OpenDialogue(Command):
+class OpenDialogueAction(Command):
     @classmethod
-    async def run(cls, request: Request, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+
         if not command == CommandType.open_dialogue:
             raise UnsuitableCommand
         
         try:
-            user_name = message_json['user_name']
+            with_user = message_json['with_user']
         except:
-            raise NotImplementedError
+            raise BadRequest
+        
+        if not meta.loggedin:
+            raise NoRegistredUserFound
         
         try:
             room = RoomStore().add_room(
-                app=request.app,
                 room=Room(
                     key=uuid.uuid4,
                     name='',
                     room_type=RoomType.private,
-                    admins=[UserStore().get_user(meta.user_name), UserStore().get_user(user_name)],
-                    allowed=[UserStore().get_user(meta.user_name), UserStore().get_user(user_name)]
+                    admins=[meta.user_name, with_user],
+                    allowed=[meta.user_name, with_user],
+                    deleted=False
                 )
             )
 
-            NotificationStore().process(
-                app=request.app,
-                notification=CreateRoomNotification(CommandType.open_dialogue, datetime.now(), meta.user_name, True, 'Private message', user_name, room.key)
+            await NotificationStore().process(
+                ws=ws_response,
+                notification=OpenDialogueNotification(
+                    action=CommandType.open_dialogue,
+                    datetime=datetime.now(),
+                    expired=False,
+                    success=True,
+                    reason='',
+                    user_name=meta.user_name,
+                    users=room.admins
+                )
+            )
+            await NotificationStore().process(
+                ws=ws_response,
+                notification=OpenDialogueNotification(
+                    action=CommandType.open_dialogue,
+                    datetime=datetime.now(),
+                    expired=False,
+                    success=True,
+                    reason='',
+                    user_name=with_user,
+                    users=room.admins
+                )
             )
 
-            NotificationStore().process(
-                app=request.app,
-                notification=CreateRoomNotification(CommandType.open_dialogue, datetime.now(), user_name, True, 'Private message', meta.user_name, room.key)
-            )
         except DialogueOpenedAlready:
             await NotificationStore().process(
                 ws=ws_response,
-                notification=CreateRoomNotification(
-                    action=CommandType.create_room,
+                notification=OpenDialogueNotification(
+                    action=CommandType.open_dialogue,
                     datetime=datetime.now(),
                     expired=False,
                     success=False,
-                    reason='Dialogue opened already.',
+                    reason=DIALOGUE_OPENED_ERR,
                     user_name=meta.user_name,
-                    room_name=room.name
+                    users=room.admins
                 )
             )
-        except:
-            raise UnknownError
+        except NotAuthorized:
+            await NotificationStore().process(
+                ws=ws_response,
+                notification=OpenDialogueNotification(
+                    action=CommandType.open_dialogue,
+                    datetime=datetime.now(),
+                    expired=False,
+                    success=False,
+                    reason=NO_AUTH,
+                    user_name=meta.user_name,
+                    users=room.admins
+                )
+            )
         
+        return meta
+
+class DeleteDialogueAction(Command):
+    @classmethod
+    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+        if not command == CommandType.delete_dialogue:
+            raise UnsuitableCommand
+        
+        try:
+            with_user = message_json['with_user']
+        except:
+            raise NotImplementedError
+        
+        if not meta.loggedin:
+            raise NoRegistredUserFound
+        
+        try:
+            room = RoomStore().find_private_room(
+                user1=UserStore().get_user(with_user),
+                user2=UserStore().get_user(meta.user_name)
+            )
+
+            if room is None:
+                raise NoRoomFound
+            
+            users = room.admins.copy()
+
+            RoomStore().delete_room(room=room, admin=UserStore().get_user(meta.user_name))
+
+            await NotificationStore().process(
+                ws=ws_response,
+                notification=DeleteDialogueNotification(
+                    action=CommandType.delete_dialogue,
+                    datetime=datetime.now(),
+                    expired=False,
+                    success=True,
+                    reason='',
+                    user_name=meta.user_name,
+                    users=users
+                )
+            )
+            await NotificationStore().process(
+                ws=ws_response,
+                notification=DeleteDialogueNotification(
+                    action=CommandType.delete_dialogue,
+                    datetime=datetime.now(),
+                    expired=False,
+                    success=True,
+                    reason='',
+                    user_name=with_user,
+                    users=users
+                )
+            )
+        except NoRoomFound:
+            await NotificationStore().process(
+                ws=ws_response,
+                notification=DeleteDialogueNotification(
+                    action=CommandType.delete_dialogue,
+                    datetime=datetime.now(),
+                    expired=False,
+                    success=False,
+                    reason=NO_DIALOGUE,
+                    user_name=meta.user_name,
+                    users=[]
+                )
+            )
+
         return meta

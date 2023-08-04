@@ -32,7 +32,7 @@ REGISTER_FAIL = 'The specified username is already taken.'
 ALREADY_LOGGED_IN = 'Already logged in.'
 ALREADY_LOGGED_OUT = 'Already logged out.'
 
-class Register(Command):
+class RegisterAction(Command):
     
     @classmethod
     async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
@@ -73,7 +73,7 @@ class Register(Command):
         return meta
 
 
-class Login(Command):
+class LoginAction(Command):
     @classmethod
     async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.login:
@@ -116,7 +116,7 @@ class Login(Command):
         return meta
 
 
-class Logout(Command):
+class LogoutAction(Command):
     @classmethod
     async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.logout:

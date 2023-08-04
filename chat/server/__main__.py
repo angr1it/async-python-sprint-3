@@ -9,21 +9,21 @@ from aiohttp.web_request import Request
 import uuid
 
 from .room_actions import (
-    JoinRoom,
-    LeaveRoom,
-    CreateRoom,
-    DeleteRoom,
-    AddUser,
-    RemoveUser
+    JoinRoomAction,
+    LeaveRoomAction,
+    CreateRoomAction,
+    DeleteRoomAction,
+    AddUserAction,
+    RemoveUserAction
 )
 from .user_actions import (
-    Register,
-    Login,
-    Logout
+    RegisterAction,
+    LoginAction,
+    LogoutAction
 )
 from .message_actions import (
-    Send,
-    History,
+    SendAction,
+    HistoryAction,
 )
 
 from .state.meta import Meta
@@ -38,7 +38,7 @@ from .state.message import (
 
 from ..exceptions import *
 from ..command_types import CommandType
-
+from .get_commands import init_commands
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -102,9 +102,7 @@ async def ws_chat(request: Request) -> web.WebSocketResponse:
 
     request.app['websockets'][meta.key] = current_websocket
 
-    commands = {}
-    commands[CommandType.send] = Send
-    commands[CommandType.history] = History
+    commands = init_commands()
 
     try:
         async for message in current_websocket:
@@ -135,14 +133,6 @@ async def ws_chat(request: Request) -> web.WebSocketResponse:
     finally:
         request.app['websockets'].pop(meta.key)
     
-    """if current_websocket.closed:
-        await broadcast(
-            app=request.app, room=room, message=ActionMessages.left_room(username, room, False)
-        )
-    else:
-        await broadcast(
-            app=request.app, room=room, message=ActionMessages.left_room(username, room, True)
-        )"""
     return current_websocket
 
 async def init_app() -> web.Application:

@@ -12,8 +12,8 @@ import uuid
 from ...singleton import singleton
 from ...command_types import CommandType
 
-from .room import Room, RoomStore, RoomType
-from .user import UserStore
+from .room import Room, RoomStore
+from .user import UserStore, User
 from ...exceptions import *
 
 logging.basicConfig(level=logging.INFO)
@@ -65,7 +65,7 @@ class Message(RoomAction):
         return {'action': self.action, 'datetime': str(self.datetime), 'private': self.private, 'room': self.room_name, 'from': self.user_name, 'to': self.to, 'message': self.message_str}
 
 @dataclass
-class JoinRoom(RoomAction):
+class JoinRoomNotification(RoomAction):
     
     def __post_init__(self):
         self._command_type_check(CommandType.join_room)
@@ -124,7 +124,7 @@ class FilePublished(UserAction):
         return {'action': CommandType.publish_file, 'publisher': self.publisher, 'key': self.key, 'datetime': self.datetime}
 
 @dataclass
-class GetRoomHistory(Action):
+class GetHistory(Action):
 
     messages: List[Dict]
 
@@ -135,7 +135,7 @@ class GetRoomHistory(Action):
         return {'action': CommandType.history, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'messages': self.messages}
 
 @dataclass
-class CreateRoom(UserAction):
+class CreateRoomNotification(UserAction):
 
     room_name: str
     admins: List[str]
@@ -148,7 +148,29 @@ class CreateRoom(UserAction):
         return {'action': CommandType.create_room, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name, 'admins': self.admins, 'allowed': self.allowed}
 
 @dataclass
-class CreateRoomAnon(Action):
+class OpenDialogueNotification(UserAction):
+
+    users: List[str]
+
+    def __post_init__(self):
+        self._command_type_check(CommandType.open_dialogue)
+
+    def get_notification(self) -> Dict:
+        return {'action': CommandType.open_dialogue, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'users': self.users}
+
+@dataclass
+class DeleteDialogueNotification(UserAction):
+
+    users: List[str]
+
+    def __post_init__(self):
+        self._command_type_check(CommandType.delete_dialogue)
+
+    def get_notification(self) -> Dict:
+        return {'action': CommandType.delete_dialogue, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'users': self.users}
+
+@dataclass
+class CreateRoomAnonNotification(Action):
 
     room_name: str
 
@@ -159,7 +181,7 @@ class CreateRoomAnon(Action):
         return {'action': CommandType.create_room, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name}
 
 @dataclass
-class DeleteRoom(UserAction):
+class DeleteRoomNotification(UserAction):
 
     room_name: str
 
@@ -170,7 +192,18 @@ class DeleteRoom(UserAction):
         return {'action': CommandType.delete_room, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name}
 
 @dataclass
-class AddUser(UserAction):
+class DeleteDialogue(UserAction):
+
+    with_user: str
+
+    def __post_init__(self):
+        self._command_type_check(CommandType.delete_dialogue)
+
+    def get_notification(self) -> Dict:
+        return {'action': CommandType.delete_dialogue, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'with_user': self.with_user}
+
+@dataclass
+class AddUserNotification(UserAction):
 
     room_name: str
     new_user: str
@@ -182,7 +215,7 @@ class AddUser(UserAction):
         return {'action': CommandType.add_user, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name, 'new_user': self.new_user}
 
 @dataclass
-class RemoveUser(UserAction):
+class RemoveUserNotification(UserAction):
 
     room_name: str
     remove_user: str
@@ -213,7 +246,7 @@ class AnyError(Action):
         return {'action': CommandType.error, 'datetime': str(self.datetime), 'reason': self.reason}
 
 @dataclass
-class LeaveRoom(RoomAction):
+class LeaveRoomNotification(RoomAction):
 
     def __post_init__(self):
         self._command_type_check(CommandType.leave_room)
@@ -235,10 +268,10 @@ class NotificationStore:
 
         if issubclass(type(action), UserAction):
             try:
-                self.store['users'][action.username].append(action)
+                self.store['users'][action.user_name].append(action)
             except KeyError:
-                self.store['users'][action.username] = list()
-                self.store['users'][action.username].append(action)
+                self.store['users'][action.user_name] = list()
+                self.store['users'][action.user_name].append(action)
             finally:
                 return
         
@@ -260,10 +293,10 @@ class NotificationStore:
 
         if issubclass(type(notification), RoomAction):
             if not RoomStore().user_in_room(
-                user=UserStore().get_user(username=notification.user_name),
+                username=notification.user_name,
                 room=RoomStore().get_room_by_name(room_name=notification.room_name)
             ):
-                raise NoRoomAccessError
+                raise NoRegistredUserFound
 
         self.__add(notification)
         await self.__send(ws=ws, mssg=notification.get_notification())
@@ -275,14 +308,21 @@ class NotificationStore:
         except:
             raise NoRoomFound
     
-    async def history(self, ws: web.WebSocketResponse, room: Room, n: int = 20) -> bool:
+    def get_n_notifications_user(self, user: User, n: int = 20) -> List:
+        try:
+            notifications = [notification.get_notification() for notification in self.store['users'][user.username]][:n]
+            return notifications
+        except:
+            raise NoRegistredUserFound
+        
+    async def history_room(self, ws: web.WebSocketResponse, room: Room, n: int = 20) -> bool:
         
         if room is None:
             return ValueError
         
         await self.process(   
             ws=ws,
-            notification=GetRoomHistory(
+            notification=GetHistory(
                 action=CommandType.history,
                 datetime=datetime.now(),
                 success=True,
@@ -294,6 +334,24 @@ class NotificationStore:
    
         return True
 
+    async def history_user(self, ws: web.WebSocketResponse, user: User, n: int = 20) -> bool:
+        
+        if user is None:
+            return ValueError
+        
+        await self.process(   
+            ws=ws,
+            notification=GetHistory(
+                action=CommandType.history,
+                datetime=datetime.now(),
+                success=True,
+                reason='',
+                messages=self.get_n_notifications_user(user=user, n=n),
+                expired=False
+            )
+        )
+   
+        return True
     async def dump(self):
         pass
 

@@ -14,9 +14,22 @@ class SendRequests(Enum):
     SEND_JSON_RESP = {'action': '/send', 'datetime': test_dt, 'private': False, 'room': 'Global', 'from': 'andre', 'to': '/all', 'message': 'hello'}
 
 class HistoryRequests(Enum):
-    HISTORY_COMMAND = 'Global 1'
+    HISTORY_COMMAND = '1 Global'
     HISTORY_JSON_REQ = {'command': '/history', 'room': 'Global', 'n': 1}   
     HISTORY_JSON_RESP = {'action': '/history', 'datetime': test_dt, 'success': True, 'reason': '', 'messages': [SendRequests.SEND_JSON_RESP.value]}
+
+    HISTORY_USER_COMMAND = '10'
+    HISTORY_USER_DEFAULT_COMMAND = ' '
+    HISTORY_USER_JSON_REQ = {'command': '/history', 'room': '', 'n': 10}
+    HISTORY_USER_DEFAULT_USER_JSON_REQ = {'command': '/history', 'room': '', 'n': 20}
+    HISTORY_USER_DEFAULT_USER_JSON_RESP = {
+        'action': CommandType.history,
+        'datetime': test_dt,
+        'success': True, 
+        'reason': '', 
+        'messages': [
+            {'action': CommandType.create_room, 'datetime': test_dt, 'success': True, 'reason': '', 'room_name': 'open_room', 'admins': ['andre'], 'allowed': ['andre']}
+        ]}
 
 class RegisterRequests(Enum):
     REGISTER_COMMAND = 'user1 123'
@@ -37,10 +50,15 @@ class LogoutRequests(Enum):
     LOGOUT_JSON_RESP = {'action': '/logout', 'success': True, 'datetime': test_dt, 'user': 'anonymus_22379152', 'reason': ''}
 
 class CreateOpenRoomRequests(Enum):
-    COMMAND = 'open_room /open'
-    JSON_REQ = {'command': CommandType.create_room, 'room_name': 'open_room', 'room_type': '/open'}
-    JSON_RESP_ANON = {'action': CommandType.create_room, 'datetime': test_dt, 'success': False, 'reason': 'Not authorized.', 'room_name': 'open_room'}
-    JSON_RESP_SUCCESS = {'action': CommandType.create_room, 'datetime': test_dt, 'success': True, 'reason': '', 'room_name': 'open_room', 'admins': ['user1'], 'allowed': ['user1']}
+    CREATE_COMMAND = 'open_room /open'
+    CREATE_JSON_REQ = {'command': CommandType.create_room, 'room_name': 'open_room', 'room_type': '/open'}
+    CREATE_JSON_RESP_ANON = {'action': CommandType.create_room, 'datetime': test_dt, 'success': False, 'reason': 'Not authorized.', 'room_name': 'open_room'}
+    CREATE_JSON_RESP_SUCCESS = {'action': CommandType.create_room, 'datetime': test_dt, 'success': True, 'reason': '', 'room_name': 'open_room', 'admins': ['user1'], 'allowed': ['user1']}
+    
+    DELETE_COMMAND = 'open_room'
+    DELETE_JSON_REQ = {'command': CommandType.delete_room, 'room_name': 'open_room'}
+    DELETE_JSON_RESP_ANON = {'action': CommandType.delete_room, 'datetime': test_dt, 'success': False, 'reason': 'Not authorized.', 'room_name': 'open_room'}
+    DELETE_JSON_RESP_SUCCESS = {'action': CommandType.delete_room, 'datetime': test_dt, 'success': True, 'reason': '', 'room_name': 'open_room'}
 
 class JoinOpenRequests(Enum):
     COMMAND = 'open_room'  
@@ -53,12 +71,13 @@ class RestrictedRoomRequests(Enum):
     ADD_USER_COMMAND = 'restricted_room user2'
     REMOVE_USER_COMMAND = 'restricted_room user2'
     LEAVE_COMMAND = 'restricted_room'
+
     CREATE_ROOM_REQ = {'command': CommandType.create_room, 'room_name': 'restricted_room', 'room_type': '/restricted'}
     ADD_USER_REQ = {'command': CommandType.add_user, 'room_name': 'restricted_room', 'new_user': 'user2'}
     JOIN_REQ = {'command': CommandType.join_room, 'room_name': 'restricted_room'}
     REMOVE_USER_REQ = {'command': CommandType.remove_user, 'room_name': 'restricted_room', 'remove_user': 'user2'}
     LEAVE_REQ = {'command': CommandType.leave_room, 'room_name': 'restricted_room'}
-
+    
     CREATE_ROOM_RESP_SUCCESS = {'action': CommandType.create_room, 'datetime': test_dt, 'success': True, 'reason': '', 'room_name': 'restricted_room', 'admins': ['user1'], 'allowed': ['user1']}
     ADD_USER_RESP_NOT_ALLOWED = {'action': CommandType.add_user, 'datetime': test_dt, 'success': False, 'reason': 'Not allowed.', 'room_name': 'restricted_room', 'new_user': 'user2'}
     ADD_USER_RESP_NO_AUTH = {'action': CommandType.add_user, 'datetime': test_dt, 'success': False, 'reason': 'Not authorized.', 'room_name': 'restricted_room', 'new_user': 'user2'}
@@ -68,3 +87,13 @@ class RestrictedRoomRequests(Enum):
     REMOVE_USER_RESP_ANON = {'action': CommandType.remove_user, 'datetime': test_dt, 'success': False, 'reason': 'Not allowed.', 'room_name': 'restricted_room', 'remove_user': 'user2'}
     REMOVE_USER_RESP_SUCCESS = {'action': CommandType.remove_user, 'datetime': test_dt, 'success': True, 'reason': '', 'room_name': 'restricted_room', 'remove_user': 'user2'}
     LEAVE_ROOM_SUCCESS = {'action': CommandType.leave_room, 'datetime': test_dt, 'success': True, 'reason': '', 'room_name': 'restricted_room', 'remove_user': 'user2'}
+
+class OpenDialogueRequests(Enum):
+    OPEN_COMMAND = 'user2'
+    OPEN_JSON_REQ = {'command': CommandType.open_dialogue, 'with_user': 'user2'}
+    OPEN_JSON_RESP_SUCCESS = {'action': CommandType.open_dialogue, 'datetime': test_dt, 'success': True, 'reason': '', 'users': ['user1', 'user2']}
+
+    DELETE_COMMAND = 'user1'
+    DELETE_JSON_REQ = {'command': CommandType.delete_dialogue, 'with_user': 'user1'}
+    DELETE_JSON_RESP_ERR = {'action': CommandType.delete_dialogue, 'datetime': test_dt, 'success': False, 'reason': 'No dialogue found.', 'users': []}
+    DELETE_JSON_RESP_SUCCESS = {'action': CommandType.delete_dialogue, 'datetime': test_dt, 'success': True, 'reason': '', 'users': ['user1', 'user2']}

@@ -15,13 +15,16 @@ from .client_commands import (
     RegisterCommand,
     LoginCommand,
     LogoutCommand,
-    PublishFile
+    PublishFileCommand
 )
 from .client_commands import (
     CommandArgError, 
     EmptyCommand,
     UnsuitableCommand
 )
+from ..command_types import CommandType
+
+from .get_commands import init_commands
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('client')
 
@@ -64,7 +67,7 @@ async def handle_input(websocket: ClientWebSocketResponse, input: Coroutine[str,
     :param input: Coroutine that handles inputs -- yields str
     :return:
     """
-    commands = [SendCommand, HistoryCommand]
+    commands = init_commands()
 
     while True:
         message = await input()
@@ -75,65 +78,33 @@ async def handle_input(websocket: ClientWebSocketResponse, input: Coroutine[str,
             str_command = message
             content = None
 
-        processed = False
-        for command in commands:
-            try:
-                await command.run(websocket, str_command, content)
-                processed = True
-            except UnsuitableCommand:
-                continue
-            except CommandArgError as ex:
-                logger.error(ex)
-            except EmptyCommand as ex:
-                logger.error('Command is empty!')
-                break
+        try:
+            await commands[CommandType(str_command)].run(websocket, str_command, content)
+        except CommandArgError as ex:
+            logger.error(ex)
+        except EmptyCommand as ex:
+            logger.error('Command is empty!')
         
-        if not processed:
-            logger.info('Unknown command! Try again..')
 
 async def handler(nick: str = None, room: str = None) -> None:
-    """
-    Does the following things well:
-      * Task that subscribes to all messages from the server
-      * Task that PINGs the backend every 60 second
-      * Change the nickname to `Jonas`
-      * Join a chat room called `test`
-      * Allows sending message from the terminal
-    Does the following bad:
-      * Message formatting. Logs are simply written.
-    :return: 
-    """
+
     async with ClientSession() as session:
         async with session.ws_connect('ws://0.0.0.0:8080/chat', ssl=False) as ws:
             read_message_task = asyncio.create_task(subscribe_to_messages(websocket=ws))
             
-            #await JoinRoom.run(ws, '/join_room', room)
-            #await SetName.run(ws, '/set_name', nick)
-
             ping_task = asyncio.create_task(ping(websocket=ws))
             send_input_message_task = asyncio.create_task(handle_input(websocket=ws))
 
-            #await UserList.run(ws, '/user_list')
-            # This function returns two variables, a list of `done` and a list of `pending` tasks.
-            # We can ask it to return when all tasks are completed, first task is completed or on first exception
+
             done, pending = await asyncio.wait(
                 [read_message_task, ping_task, send_input_message_task], return_when=asyncio.FIRST_COMPLETED,
             )
-            # When this line of line is hit, we know that one of the tasks has been completed.
-            # In this program, this can happen when:
-            #   * we (the client) or the server is closing the connection. (websocket.close() in aiohttp)
-            #   * an exception is raised
 
-            # First, we want to close the websocket connection if it's not closed by some other function above
             if not ws.closed:
                 await ws.close()
-            # Then, we cancel each task which is pending:
+
             for task in pending:
                 task.cancel()
-            # At this point, everything is shut down. The program will exit.
-
 
 if __name__ == '__main__':
-    #input_nick = input('Nick (random if not provided): ')
-    #input_room = input('Room (`Default` if not provided): ')
     asyncio.run(handler(nick='', room=''))

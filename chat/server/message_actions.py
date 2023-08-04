@@ -11,7 +11,9 @@ from ..exceptions import (
     UnsuitableCommand,
     CommandArgError,
     EmptyCommand,
-    BadRequest
+    BadRequest,
+    NoRegistredUserFound,
+    UnknownError
 )
 
 from .state.meta import Meta
@@ -23,7 +25,7 @@ from .command import Command
 logger = logging.getLogger()
 
 
-class Send(Command):
+class SendAction(Command):
     @classmethod
     async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
     
@@ -43,48 +45,43 @@ class Send(Command):
         
         
         if private:
-            try:
-                NotificationStore().process(
-                    ws=ws_response,
-                    notification=Message(
-                        action=CommandType.send,
-                        datetime=datetime.now(),
-                        room_key=RoomStore().find_private_room(user1=UserStore().get_user(meta.user_name), user2=UserStore().get_user(to_user)).key,
-                        user_name=meta.user_name,
-                        to=to_user,
-                        private=True,
-                        message_str=message
-                    )
-                )
-            except:
-                raise NotImplementedError
-            
-            return meta
-        
-        try:
-            await NotificationStore().process(
+            NotificationStore().process(
                 ws=ws_response,
                 notification=Message(
                     action=CommandType.send,
                     datetime=datetime.now(),
-                    room_name=room_name,
+                    room_key=RoomStore().find_private_room(user1=UserStore().get_user(meta.user_name), user2=UserStore().get_user(to_user)).key,
                     user_name=meta.user_name,
                     to=to_user,
-                    private=False,
-                    message_str=message,
-                    expired=False,
-                    success=True,
-                    reason=''
+                    private=True,
+                    message_str=message
                 )
             )
+            
+            return meta
+        
 
-        except:
-            raise NotImplementedError
+        await NotificationStore().process(
+            ws=ws_response,
+            notification=Message(
+                action=CommandType.send,
+                datetime=datetime.now(),
+                room_name=room_name,
+                user_name=meta.user_name,
+                to=to_user,
+                private=False,
+                message_str=message,
+                expired=False,
+                success=True,
+                reason=''
+            )
+        )
+
+
 
         return meta
-    
 
-class History(Command):
+class HistoryAction(Command):
     @classmethod
     async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.history:
@@ -97,6 +94,16 @@ class History(Command):
         except:
             raise BadRequest
 
-        await NotificationStore().history(ws=ws_response, room=RoomStore().get_room_by_name(room_name=room), n=n)
+        if room is None:
+            room = ''
+
+        if room == '':
+            if not meta.loggedin:
+                raise NoRegistredUserFound
+            
+            await NotificationStore().history_user(ws=ws_response, user=UserStore().get_user(username=meta.user_name), n=n)
+            return meta
+        
+        await NotificationStore().history_room(ws=ws_response, room=RoomStore().get_room_by_name(room_name=room), n=n)
 
         return meta

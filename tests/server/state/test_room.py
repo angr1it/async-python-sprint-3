@@ -52,25 +52,25 @@ class TestRoomStore(unittest.TestCase):
             )
         )
 
-        self.assertTrue(RoomStore().user_in_room(user=user1, room=room1))   
-        self.assertFalse(RoomStore().user_in_room(user=user2, room=room1))
+        self.assertTrue(RoomStore().user_in_room(username=user1.username, room=room1))   
+        self.assertFalse(RoomStore().user_in_room(username=user2.username, room=room1))
 
         self.assertFalse(RoomStore().join(user=user2, room=room1))
-        self.assertFalse(RoomStore().user_in_room(user=user2, room=room1))
+        self.assertFalse(RoomStore().user_in_room(username=user2.username, room=room1))
 
         self.assertTrue(RoomStore().join(user=user2, room=room2))
-        self.assertTrue(RoomStore().user_in_room(user=user2, room=room2))
+        self.assertTrue(RoomStore().user_in_room(username=user2.username, room=room2))
 
         self.assertTrue(RoomStore().add_user_to_room(room=room1, admin=user1, new_user=user2))
         self.assertTrue(RoomStore().join(user=user2, room=room1))
-        self.assertTrue(RoomStore().user_in_room(user=user2, room=room1))
+        self.assertTrue(RoomStore().user_in_room(username=user2.username, room=room1))
 
         self.assertFalse(RoomStore().remove_user_from_room(room=room1, admin=user2, remove_user=user1))
 
         self.assertTrue(RoomStore().remove_user_from_room(room=room1, admin=user1, remove_user=user2))
-        self.assertFalse(RoomStore().user_in_room(user=user2, room=room1))
+        self.assertFalse(RoomStore().user_in_room(username=user2.username, room=room1))
         self.assertFalse(RoomStore().join(user=user2, room=room1))
-        self.assertFalse(RoomStore().user_in_room(user=user2, room=room1))
+        self.assertFalse(RoomStore().user_in_room(username=user2.username, room=room1))
 
         self.assertIsNotNone(RoomStore().get_room_by_name(room_name=room1.name))
         self.assertTrue(RoomStore().remove_user_from_room(room=room1, admin=user1, remove_user=user1))
@@ -92,16 +92,16 @@ class TestRoomStore(unittest.TestCase):
             )   
         )
 
-        self.assertTrue(RoomStore().user_in_room(user=user1, room=room))   
-        self.assertTrue(RoomStore().user_in_room(user=user2, room=room))
+        self.assertTrue(RoomStore().user_in_room(username=user1.username, room=room))   
+        self.assertTrue(RoomStore().user_in_room(username=user2.username, room=room))
 
         self.assertTrue(RoomStore().user_is_admin(room=room, user=user1))
         self.assertFalse(RoomStore().add_user_to_room(room=room, admin=user1, new_user=user3))
         self.assertFalse(RoomStore().remove_user_from_room(room=room, admin=user1, remove_user=user2))
 
         self.assertTrue(RoomStore().leave(user=user1, room=room))
-        self.assertFalse(RoomStore().user_in_room(user=user1, room=room))
-        self.assertFalse(RoomStore().user_in_room(user=user2, room=room))
+        self.assertFalse(RoomStore().user_in_room(username=user1.username, room=room))
+        self.assertFalse(RoomStore().user_in_room(username=user2.username, room=room))
         self.assertIsNone(RoomStore().get_room_by_name(room_name=room.name))
 
 

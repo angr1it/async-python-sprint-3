@@ -34,3 +34,9 @@ class WeakPassword(Exception):
 
 class NoRegistredUserFound(Exception):
     pass
+
+class NotAuthorized(Exception):
+    pass
+
+class NoRoomFound(Exception):
+    pass

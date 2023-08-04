@@ -17,15 +17,15 @@ from ..exceptions import (
 
 logger = logging.getLogger()
 
-SEND_PARSE_ERR = "/send [room_name] [to_username] [private := (True/False)] [message] --required format"
-HISTORY_PARSE_ERR = "/history [room_name] [n] --required format"
-CREATE_ROOM_PARSE_ERR = '/create_room [room_name] [room_type] --required format'
-ADD_USER_PARSE_ERR = '/add_user [room_name] [user_name] --required format'
-REMOVE_USER_PARSE_ERR = '/remove_user [room_name] [remove_user] --required format'
-LEAVE_ROOM_PARSE_ERR = '/leave_room [room_name] --required format'
-REGISTER_PARSE_ERR = '/register [username] [password] --required format'
-LOGIN_PARSE_ERR = '/login [username] [key] --required format'
-
+SEND_PARSE_ERR = "/send <room_name> <to_username> <private := (True/False)> <message> --required format"
+HISTORY_PARSE_ERR = "/history [n] [room_name]  --required format"
+CREATE_ROOM_PARSE_ERR = '/create_room <room_name> <room_type> --required format'
+ADD_USER_PARSE_ERR = '/add_user <room_name> <user_name> --required format'
+REMOVE_USER_PARSE_ERR = '/remove_user <room_name> <remove_user> --required format'
+LEAVE_ROOM_PARSE_ERR = '/leave_room <room_name> --required format'
+REGISTER_PARSE_ERR = '/register <username> <password> --required format'
+LOGIN_PARSE_ERR = '/login <username> <key> --required format'
+PUBLISH_FILE_PARSE_ERR = '/publish_file <path> [user1] [user2]...[usern] --required format'
 
 class Command:
     @classmethod
@@ -67,16 +67,21 @@ class HistoryCommand(Command):
         if not command == CommandType.history:
             raise UnsuitableCommand
         
+        n = 20
+        room = ''
+        if content is None or content == '':
+            content = ''
+        
         try:
-            room, n_str = content.split(' ', 1)
+            n_str, room = content.split(' ', 1)
             n = int(n_str)
         except ValueError as ex:
-            logger.info(HISTORY_PARSE_ERR)
-            logger.info(f"Couldn't parse n as number of messages in /history; set as default value n = 20.")
-            n = 20
-        except:
-            logger.info(HISTORY_PARSE_ERR)
-            return
+            try:
+                n = int(content)
+            except:
+                pass
+        
+
 
         await websocket.send_json({'command': command, 'room': room, 'n': n})
 
@@ -212,7 +217,38 @@ class QuitCommand(Command):
         
         await websocket.close()
 
-class PublishFile(Command):
+class DeleteRoomCommand(Command):
+
+    @classmethod
+    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+        super().run(websocket, command)
+
+        if not command == CommandType.delete_room:
+            raise UnsuitableCommand
+        
+        await websocket.send_json({'command': command, 'room_name': content})
+
+class OpenDialogueCommand(Command):
+    @classmethod
+    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+        super().run(websocket, command)
+
+        if not command == CommandType.open_dialogue:
+            raise UnsuitableCommand
+        
+        await websocket.send_json({'command': command, 'with_user': content})
+
+class DeleteDialogueCommand(Command):
+    @classmethod
+    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+        super().run(websocket, command)
+
+        if not command == CommandType.delete_dialogue:
+            raise UnsuitableCommand
+        
+        await websocket.send_json({'command': command, 'with_user': content})
+
+class PublishFileCommand(Command):
 
     async def __sender(ws: ClientWebSocketResponse, path: str):
         async with aiofiles.open(path, 'rb') as f:
@@ -231,7 +267,8 @@ class PublishFile(Command):
         try:
             path, options = content.split(' ', 1)
         except:
-            raise CommandArgError("/publish_file <path> [user1] [user2]...[usern] --required format")
+            logger.info(PUBLISH_FILE_PARSE_ERR)
+            return
         
         try:
             usernames = options.split(' ')
@@ -245,5 +282,15 @@ class PublishFile(Command):
         
         await websocket.send_json({'command': command, 'usernames': usernames, 'filename': filename})
         
-        await PublishFile.__sender(ws=websocket, path=path)
+        await PublishFileCommand.__sender(ws=websocket, path=path)
 
+class LoadFileCommand(Command):
+
+    @classmethod
+    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+        super().run(websocket, command)
+
+        if not command == CommandType.publish_file:
+            raise UnsuitableCommand
+        
+        return

@@ -19,7 +19,10 @@ from chat.client.client_commands import (
     LeaveRoomCommand,
     RegisterCommand,
     LoginCommand,
-    LogoutCommand
+    LogoutCommand,
+    OpenDialogueCommand,
+    DeleteRoomCommand,
+    DeleteDialogueCommand
 )
 
 from chat.command_types import CommandType
@@ -31,7 +34,8 @@ from chat.requests_examples import (
     RestrictedRoomRequests,
     RegisterRequests,
     LoginRequests,
-    LogoutRequests
+    LogoutRequests,
+    OpenDialogueRequests
 )
 class TestClientCommands(aiounittest.AsyncTestCase):
 
@@ -60,15 +64,31 @@ class TestClientCommands(aiounittest.AsyncTestCase):
 
         self.assertIsNone(self.mock_ws.send_json.assert_called_with(HistoryRequests.HISTORY_JSON_REQ.value))
 
+        await HistoryCommand().run(
+            websocket=self.mock_ws,
+            command=CommandType.history,
+            content=HistoryRequests.HISTORY_USER_COMMAND.value
+        )
+
+        self.assertIsNone(self.mock_ws.send_json.assert_called_with(HistoryRequests.HISTORY_USER_JSON_REQ.value))
+
+        await HistoryCommand().run(
+            websocket=self.mock_ws,
+            command=CommandType.history,
+            content=HistoryRequests.HISTORY_USER_DEFAULT_COMMAND.value
+        )
+
+        self.assertIsNone(self.mock_ws.send_json.assert_called_with(HistoryRequests.HISTORY_USER_DEFAULT_USER_JSON_REQ.value))
+
     async def test_create_room(self):
 
         await CreateRoomCommand().run(
             websocket=self.mock_ws,
             command=CommandType.create_room,
-            content=CreateOpenRoomRequests.COMMAND.value
+            content=CreateOpenRoomRequests.CREATE_COMMAND.value
         )
 
-        self.assertIsNone(self.mock_ws.send_json.assert_called_with(CreateOpenRoomRequests.JSON_REQ.value))
+        self.assertIsNone(self.mock_ws.send_json.assert_called_with(CreateOpenRoomRequests.CREATE_JSON_REQ.value))
 
     async def test_join_room(self):
 
@@ -139,3 +159,33 @@ class TestClientCommands(aiounittest.AsyncTestCase):
         )
 
         self.assertIsNone(self.mock_ws.send_json.assert_called_with(LogoutRequests.LOGOUT_JSON_REQ.value))
+
+    async def test_open_dialogue(self):
+
+        await OpenDialogueCommand().run(
+            websocket=self.mock_ws,
+            command=CommandType.open_dialogue,
+            content=OpenDialogueRequests.OPEN_COMMAND.value
+        )
+
+        self.assertIsNone(self.mock_ws.send_json.assert_called_with(OpenDialogueRequests.OPEN_JSON_REQ.value))
+
+    async def test_delete_dialogue(self):
+
+        await DeleteDialogueCommand().run(
+            websocket=self.mock_ws,
+            command=CommandType.delete_dialogue,
+            content=OpenDialogueRequests.DELETE_COMMAND.value
+        )
+
+        self.assertIsNone(self.mock_ws.send_json.assert_called_with(OpenDialogueRequests.DELETE_JSON_REQ.value))
+        
+    async def test_delete_room(self):
+
+        await DeleteRoomCommand().run(
+            websocket=self.mock_ws,
+            command=CommandType.delete_room,
+            content=CreateOpenRoomRequests.DELETE_COMMAND.value
+        )
+
+        self.assertIsNone(self.mock_ws.send_json.assert_called_with(CreateOpenRoomRequests.DELETE_JSON_REQ.value))
