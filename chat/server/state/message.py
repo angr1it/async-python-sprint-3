@@ -1,12 +1,12 @@
-from dataclasses import dataclass
-import dataclasses
-import json
 from typing import List, Dict
 import logging
-import asyncio
 from datetime import datetime
 from aiohttp import web
 
+from pydantic.dataclasses import dataclass
+from pydantic.tools import parse_obj_as
+import dataclasses
+import json
 import uuid
 
 from ...singleton import singleton
@@ -15,101 +15,42 @@ from ...command_types import CommandType
 from .room import Room, RoomStore
 from .user import UserStore, User
 from ...exceptions import *
+from ..manage_files import read_file, write_file, to_dict
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from dataclasses import dataclass
-from abc import ABC, abstractmethod
+from abc import ABC
 
 
 @dataclass
 class Action(ABC):
     action: str
-    datetime: float
+    datetime: str
     expired: bool
-
+    
     success: bool
     reason: str
 
-    @abstractmethod
+    payload: Dict
+
     def get_notification(self) -> Dict:
-        raise NotImplementedError('get_notification must be overrided in the child class!')
-    
-    def _command_type_check(self, expected: str):
-        if self.action == expected:
-                return
-            
-        raise ValueError(f"Message's action string must be equal to {expected}! Current: {self.action}")
+        return {'action': self.action, 'datetime': self.datetime, 'success': self.success, 'reason': self.reason, 'payload': self.payload}
 
 @dataclass
 class UserAction(Action):
     user_name: str
+
+    def get_notification(self) -> Dict:
+        return {'action': self.action, 'success': self.success, 'reason': self.reason, 'datetime': self.datetime, 'user': self.user_name, 'payload': self.payload}
 
 @dataclass
 class RoomAction(Action):
     room_name: str
     user_name: str
 
-@dataclass
-class Message(RoomAction):
-    to: str
-    
-    private: bool
-    message_str: str
-    
-    def __post_init__(self):
-        self._command_type_check(CommandType.send)
-
-    def get_notification(self):
-        return {'action': self.action, 'datetime': str(self.datetime), 'private': self.private, 'room': self.room_name, 'from': self.user_name, 'to': self.to, 'message': self.message_str}
-
-@dataclass
-class JoinRoomNotification(RoomAction):
-    
-    def __post_init__(self):
-        self._command_type_check(CommandType.join_room)
-
-    def get_notification(self):
-        return {'action': CommandType.join_room, 'success': self.success, 'reson': self.reason, 'datetime': str(self.datetime), 'user': self.user_name, 'room_name': self.room_name}
-
-@dataclass
-class Login(UserAction):
-
-    def __post_init__(self):
-        self._command_type_check(CommandType.login)
-    
     def get_notification(self) -> Dict:
-        return {'action': CommandType.login, 'success': self.success, 'datetime': str(self.datetime), 'user': self.user_name, 'reason': self.reason}
-
-@dataclass
-class Logout(UserAction):
-
-    def __post_init__(self):
-        self._command_type_check(CommandType.logout)
-    
-    def get_notification(self) -> Dict:
-        return {'action': CommandType.logout, 'success': self.success, 'datetime': str(self.datetime), 'user': self.user_name, 'reason': self.reason}
-    
-@dataclass
-class Register(Action):
-
-    username: str
-
-    def __post_init__(self):
-        self._command_type_check(CommandType.register)
-    
-    def get_notification(self) -> Dict:
-        return {'action': CommandType.register, 'datetime': str(self.datetime),  'success': self.success, 'user': self.username, 'reason': self.reason}
-
-@dataclass
-class FileLoaded(UserAction):
-
-    def __post_init__(self):
-        self._command_type_check(CommandType.publish_file)
-    
-    def get_notification(self) -> Dict:
-        return {'action': CommandType.publish_file, 'success': self.success, 'publisher': self.publisher}
+        return {'action': self.action, 'success': self.success, 'reason': self.reason, 'datetime': self.datetime, 'user': self.user_name, 'room_name': self.room_name, 'payload': self.payload}
 
 @dataclass
 class FilePublished(UserAction):
@@ -123,118 +64,6 @@ class FilePublished(UserAction):
     def get_notification(self) -> Dict:
         return {'action': CommandType.publish_file, 'publisher': self.publisher, 'key': self.key, 'datetime': self.datetime}
 
-@dataclass
-class GetHistory(Action):
-
-    messages: List[Dict]
-
-    def __post_init__(self):
-        self._command_type_check(CommandType.history)
-    
-    def get_notification(self) -> Dict:
-        return {'action': CommandType.history, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'messages': self.messages}
-
-@dataclass
-class CreateRoomNotification(UserAction):
-
-    room_name: str
-    admins: List[str]
-    allowed: List[str]
-
-    def __post_init__(self):
-        self._command_type_check(CommandType.create_room)
-
-    def get_notification(self) -> Dict:
-        return {'action': CommandType.create_room, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name, 'admins': self.admins, 'allowed': self.allowed}
-
-@dataclass
-class OpenDialogueNotification(UserAction):
-
-    users: List[str]
-
-    def __post_init__(self):
-        self._command_type_check(CommandType.open_dialogue)
-
-    def get_notification(self) -> Dict:
-        return {'action': CommandType.open_dialogue, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'users': self.users}
-
-@dataclass
-class DeleteDialogueNotification(UserAction):
-
-    users: List[str]
-
-    def __post_init__(self):
-        self._command_type_check(CommandType.delete_dialogue)
-
-    def get_notification(self) -> Dict:
-        return {'action': CommandType.delete_dialogue, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'users': self.users}
-
-@dataclass
-class CreateRoomAnonNotification(Action):
-
-    room_name: str
-
-    def __post_init__(self):
-        self._command_type_check(CommandType.create_room)
-
-    def get_notification(self) -> Dict:
-        return {'action': CommandType.create_room, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name}
-
-@dataclass
-class DeleteRoomNotification(UserAction):
-
-    room_name: str
-
-    def __post_init__(self):
-        self._command_type_check(CommandType.delete_room)
-
-    def get_notification(self) -> Dict:
-        return {'action': CommandType.delete_room, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name}
-
-@dataclass
-class DeleteDialogue(UserAction):
-
-    with_user: str
-
-    def __post_init__(self):
-        self._command_type_check(CommandType.delete_dialogue)
-
-    def get_notification(self) -> Dict:
-        return {'action': CommandType.delete_dialogue, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'with_user': self.with_user}
-
-@dataclass
-class AddUserNotification(UserAction):
-
-    room_name: str
-    new_user: str
-
-    def __post_init__(self):
-        self._command_type_check(CommandType.add_user)
-
-    def get_notification(self) -> Dict:
-        return {'action': CommandType.add_user, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name, 'new_user': self.new_user}
-
-@dataclass
-class RemoveUserNotification(UserAction):
-
-    room_name: str
-    remove_user: str
-
-    def __post_init__(self):
-        self._command_type_check(CommandType.remove_user)
-
-    def get_notification(self) -> Dict:
-        return {'action': CommandType.remove_user, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name, 'remove_user': self.remove_user}
-
-@dataclass
-class ConnectAnon(Action):
-    name: str
-
-    def __post_init__(self):
-        self._command_type_check(CommandType.connected)
-    
-    def get_notification(self) -> Dict:
-        return {'action': CommandType.connected, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'name': self.name}
 
 @dataclass
 class AnyError(Action):
@@ -243,16 +72,58 @@ class AnyError(Action):
         self._command_type_check(CommandType.error)
 
     def get_notification(self) -> Dict:
-        return {'action': CommandType.error, 'datetime': str(self.datetime), 'reason': self.reason}
+        return {'action': CommandType.error, 'datetime': self.datetime, 'reason': self.reason}
 
-@dataclass
-class LeaveRoomNotification(RoomAction):
+def get_connected_notification(name: str) -> Action:
+    return Action(
+        action=CommandType.connected,
+        datetime=str(datetime.now()),
+        expired=False,
+        success=True,
+        reason='',
+        payload={
+            'user_name': name
+        }  
+    )
 
-    def __post_init__(self):
-        self._command_type_check(CommandType.leave_room)
+def get_message_notification(room_name, user_name, success, reason, private, to, message):
+        return RoomAction(
+            action=CommandType.send,
+            datetime=str(datetime.now()),
+            expired=False,
+            success=success,
+            reason=reason,
+            room_name=room_name,
+            user_name=user_name,
+            payload={
+                'private': private,
+                'to': to,
+                'message': message
+            }
+        )
 
-    def get_notification(self) -> Dict:
-        return {'action': CommandType.leave_room, 'datetime': str(self.datetime), 'success': self.success, 'reason': self.reason, 'room_name': self.room_name, 'user_name': self.user_name}
+def get_history_notification(user_name: str, success: bool, reason: str, payload) -> UserAction:
+    return UserAction(
+        action=CommandType.history,
+        datetime=str(datetime.now()),
+        expired=False,
+        success=success,
+        reason=reason,
+        payload={
+            'history': payload
+        },
+        user_name=user_name
+    )
+
+def get_error_message(reason):
+    return Action(
+        action=CommandType.error,
+        datetime=str(datetime.now()),
+        expired=False,
+        success=False,
+        reason=reason,
+        payload={}
+    )
 
 @singleton
 class NotificationStore:  
@@ -267,6 +138,9 @@ class NotificationStore:
     def __add(self, action: Action):
 
         if issubclass(type(action), UserAction):
+            if action.action == CommandType.history:
+                return
+            
             try:
                 self.store['users'][action.user_name].append(action)
             except KeyError:
@@ -292,10 +166,24 @@ class NotificationStore:
     async def process(self, ws: web.WebSocketResponse, notification: Action):
 
         if issubclass(type(notification), RoomAction):
-            if not RoomStore().user_in_room(
-                username=notification.user_name,
-                room=RoomStore().get_room_by_name(room_name=notification.room_name)
-            ):
+            try:
+                if notification.payload['private']:
+                    if not RoomStore().user_in_room(
+                        username=notification.user_name,
+                        room=RoomStore().find_private_room(
+                            user1=UserStore().get_user(notification.user_name),
+                            user2=UserStore().get_user(notification.payload['to'])
+                        )
+                    ):
+                        raise NoRegistredUserFound
+                else:
+                    if not RoomStore().user_in_room(
+                        username=notification.user_name,
+                        room=RoomStore().get_room_by_name(room_name=notification.room_name)
+                    ):
+                        raise NoRegistredUserFound
+            except Exception as ex:
+                logger.error(ex)   
                 raise NoRegistredUserFound
 
         self.__add(notification)
@@ -315,20 +203,18 @@ class NotificationStore:
         except:
             raise NoRegistredUserFound
         
-    async def history_room(self, ws: web.WebSocketResponse, room: Room, n: int = 20) -> bool:
+    async def history_room(self, ws: web.WebSocketResponse, user_name: str,  room: Room, n: int = 20) -> bool:
         
         if room is None:
             return ValueError
         
-        await self.process(   
+        await self.process(
             ws=ws,
-            notification=GetHistory(
-                action=CommandType.history,
-                datetime=datetime.now(),
+            notification=get_history_notification(
+                user_name=user_name,
                 success=True,
                 reason='',
-                messages=self.get_n_messages(room=room, n=n),
-                expired=False
+                payload=self.get_n_messages(room=room, n=n),
             )
         )
    
@@ -339,21 +225,60 @@ class NotificationStore:
         if user is None:
             return ValueError
         
-        await self.process(   
+        await self.process(
             ws=ws,
-            notification=GetHistory(
-                action=CommandType.history,
-                datetime=datetime.now(),
+            notification=get_history_notification(
+                user_name=user.username,
                 success=True,
                 reason='',
-                messages=self.get_n_notifications_user(user=user, n=n),
-                expired=False
+                payload=self.get_n_notifications_user(user=user, n=n)
             )
         )
    
         return True
-    async def dump(self):
-        pass
+    
+    def __store_to_dict(self):
+        data = dict()
+        data['users'] = dict()
+        data['rooms'] = dict()
+        data['other'] = list()
 
-    async def load(self):
-        pass
+        for user, user_data in self.store['users'].items():
+            data['users'][user] = [dataclasses.asdict(d) for d in user_data]
+
+        for room, room_data in self.store['rooms'].items():
+            data['rooms'][str(room)] = [dataclasses.asdict(d) for d in room_data]
+
+        data['other'] = [dataclasses.asdict(d) for d in self.store['other']]
+
+        return json.dumps(data, indent=4, sort_keys=True, default=str)
+    
+    async def dump(self, path: str = './data/messages.json') -> bool:
+        """
+        Dumps all the data necessary for future load.
+        """
+        
+        store = self.__store_to_dict()
+
+        await write_file(path, store)
+
+        return True
+    
+    async def load(self, path: str = './data/messages.json'):
+        try:
+            data = await read_file(path)
+
+            for _, user in data['rooms'].items():
+                for user_data in user:
+                    self.__add(parse_obj_as(RoomAction, user_data))
+
+            for _, user in data['users'].items():
+                for user_data in user:
+                    self.__add(parse_obj_as(UserAction, user_data))
+            
+            for other_data in data['other']:
+                self.__add(parse_obj_as(Action, other_data))
+            
+        except Exception as ex:
+            logger.error(f'Unable load users from {path}, because: {ex}.')
+            raise ex

@@ -16,7 +16,8 @@ from .client_commands import (
     RemoveUserCommand,
     LoadFileCommand,
     PublishFileCommand,
-    DeleteDialogueCommand
+    DeleteDialogueCommand,
+    SendPrivateCommand
 )
 from ..command_types import CommandType
 
@@ -25,6 +26,7 @@ def init_commands() -> Dict[CommandType, Command]:
 
 
     commands[CommandType.send] = SendCommand
+    commands[CommandType.send_private] = SendPrivateCommand
     commands[CommandType.history] = HistoryCommand
 
     commands[CommandType.login] = LoginCommand

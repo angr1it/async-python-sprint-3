@@ -1,14 +1,12 @@
 from dataclasses import dataclass
 from typing import Dict
 import json
-import dataclasses
 import logging
-from datetime import datetime
 from aiohttp import web
 import uuid
 
 from ...singleton import singleton
-from ..manage_files import write_file, read_file
+from ..manage_files import write_file, read_file, to_dict
 from ...command_types import CommandType
 
 from ...exceptions import (
@@ -103,18 +101,11 @@ class UserStore:
         self.store[username] = User(username=username, password=password)
         return self.store[username]
 
-    def __users_to_file(self):
-        data = dict()
-        for key, value in self.store.items():
-            data[key] = json.dumps(dataclasses.asdict(value), indent=4)
-
-        return data
-
     async def dump(self, path: str = './data/users.json'):
         """
         Dumps whole store in json format as it is without any encription.
         """
-        data = self.__users_to_file()
+        data = to_dict(self.store)
         await write_file(path, json.dumps(data, indent=4))
 
     async def load(self, path: str = './data/users.json'):

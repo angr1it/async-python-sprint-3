@@ -4,11 +4,21 @@ from dataclasses import dataclass
 from enum import Enum
 import uuid
 from typing import List, Dict
+import json
+import dataclasses
+import logging
+import re
 
 from ...singleton import singleton
 from .user import User
 from .meta import Meta
 from ...exceptions import *
+
+from ..manage_files import write_file, read_file, to_dict
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 DEFAULT_ROOM = 'Global'
 
@@ -22,7 +32,7 @@ class RoomType(str, Enum):
 @dataclass
 class Room:
 
-    key: str
+    key: uuid.UUID
     name: str
     room_type: RoomType
 
@@ -37,6 +47,16 @@ class Room:
         for admin in self.admins:
             if not admin in self.allowed:
                 self.allowed.append(admin)
+    
+    def to_dict(self):
+        return {
+            'key': str(self.key),
+            'name': self.name,
+            'room_type': self.room_type.value,
+            'admins': self.admins,
+            'allowed': self.allowed,
+            'deleted': self.deleted
+        }
 
 @singleton
 class RoomStore:
@@ -131,6 +151,8 @@ class RoomStore:
 
             return room
 
+        if room.name in self.key_by_name:
+            return None
 
         self.key_by_name[room.name] = room.key
         self.store[room.key] = room
@@ -277,14 +299,95 @@ class RoomStore:
         self.user_rooms[user.username].remove(room.key)
         return True
 
-    def dump(self, path: str) -> bool:
+    def __store_to_dict(self):
+        data = dict()
+        for key, value in self.store.items():
+            data[str(key)] = json.dumps(value.to_dict(), indent=4)
+
+        return data
+
+    @staticmethod
+    def __keys_to_dict(key_store):
+        data = dict()
+
+        for key, value in key_store.items():
+            data[str(key)] = str(value)
+
+        return data
+
+    def __users_to_dict(self):
+        data = dict()
+
+        for key, value in self.user_rooms.items():
+            data[key] = json.dumps([str(key_room) for key_room in value], indent=4)
+
+        return data
+
+    async def dump(self, path: str = './data/rooms.json') -> bool:
         """
         Dumps all the data necessary for future load.
         """
-        pass
+        
+        store = self.__store_to_dict()
+        
+        key_by_name = self.__keys_to_dict(self.key_by_name)
 
-    def load(self, path: str) -> bool:
-        """
-        Tryes to load saved file in order to restore state.
-        """
-        pass
+        private_keys = self.__keys_to_dict(self.private_keys)
+
+        user_room = self.__users_to_dict()
+
+        data = json.dumps({
+            'store': store,
+            'key_by_name': key_by_name,
+            'private_keys': private_keys,
+            'user_room': user_room
+        }, indent=4)
+
+        await write_file(path, data)
+
+        return True
+
+    def __load_store(self, data: Dict):
+        self.store = {}
+
+        for room_key, room_data_str in data.items():
+            key = uuid.UUID(room_key)
+            room_data = json.loads(room_data_str)
+
+            room = Room(
+                key=key,
+                name=room_data['name'],
+                room_type=RoomType(room_data['room_type']),
+                admins=room_data['admins'],
+                allowed=room_data['allowed'],
+                deleted=room_data['deleted']
+            )
+            self.store[key] = room
+            
+    def __load_key_by_name(self, data: Dict):
+        for room_name, room_key in data.items():
+            self.key_by_name[room_name] = uuid.UUID(room_key)
+
+    def __load_private_keys(self, data: Dict):
+        for pair, room_key in data.items():
+            result = re.search("'(.*)', '(.*)'", pair)
+            pset = frozenset((result.group(1), result.group(2)))
+            self.private_keys[pset] = uuid.UUID(room_key)
+
+    def __load_user_room(self, data: Dict):
+        for name, user_data in data.items():
+            user_data_list = json.loads(user_data)
+            self.user_rooms[name] = [uuid.UUID(room_key) for room_key in user_data_list]
+
+
+    async def load(self, path: str = './data/rooms.json'):
+        try:
+            data = await read_file(path)
+
+            self.__load_store(data['store'])
+            self.__load_key_by_name(data['key_by_name'])
+            self.__load_private_keys(data['private_keys'])
+            self.__load_user_room(data['user_room'])
+
+        except Exception as ex:
+            logger.error(f'Unable load users from {path}, because: {ex}.')

@@ -35,6 +35,8 @@ class CommandType(str, Enum):
     
     """
     send = '/send'
+    send_private = '/send_private'
+    
     history = '/history'
 
 

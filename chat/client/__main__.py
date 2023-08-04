@@ -84,6 +84,8 @@ async def handle_input(websocket: ClientWebSocketResponse, input: Coroutine[str,
             logger.error(ex)
         except EmptyCommand as ex:
             logger.error('Command is empty!')
+        except ValueError:
+            logger.info('Wrong command! Look for /help!')
         
 
 async def handler(nick: str = None, room: str = None) -> None:

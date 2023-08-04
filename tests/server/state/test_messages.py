@@ -1,5 +1,6 @@
 import unittest
 from datetime import datetime
+from freezegun import freeze_time
 
 from chat.server.state.room import (
     Room,
@@ -8,13 +9,18 @@ from chat.server.state.room import (
 from chat.server.state.user import User
 
 from chat.server.state.message import (
-    Message,
-    ConnectAnon
+    RoomAction,
+    Action,
+    get_message_notification
 )
 from chat.command_types import CommandType
+from chat.server.message_actions import SendAction
+from chat.requests_examples import test_dt_str
+from chat.server.state.message import get_connected_notification
 
 class TestMessageStore(unittest.TestCase):
 
+    @freeze_time(test_dt_str)
     def test_message(self):
         
         user = User(username='user', password='123')
@@ -28,55 +34,40 @@ class TestMessageStore(unittest.TestCase):
             deleted=False
         )
 
-        dt = datetime.now()
-
-        notification = Message(
-            action=CommandType.send,
-            datetime=dt,
-            expired=False,
-            success=True,
-            reason='',
-            room_name=room.name,
-            user_name=user.username,
-            to='',
-            private=False,
-            message_str='Hello, world!'
-        )
+        notification=get_message_notification(room_name=room.name, user_name=user.username, success=True, reason='',private=False, to='', message='Hello, world!')
 
         self.assertDictEqual(
             notification.get_notification(),
             {
                 'action':  CommandType.send,
-                'datetime': str(dt),
-                'private': False,
-                'room': 'room',
-                'from': 'user',
-                'to': '',
-                'message': 'Hello, world!'
+                'success': True,
+                'reason': '',
+                'datetime': str(datetime.now()),
+                'user': 'user',
+                'room_name': 'room',
+                'payload': {
+                    'private': False,
+                    'to': '',
+                    'message': 'Hello, world!'
+                }
             }
         )
 
+    @freeze_time(test_dt_str)
     def test_connect_anon(self):
         
         dt = datetime.now()
 
-        notification = ConnectAnon(
-            action=CommandType.connected,
-            datetime=dt,
-            expired=False,
-            success=True,
-            reason='',
-            name='anon',
-        )
+        notification = get_connected_notification('anonymus')
 
         self.assertDictEqual(
             notification.get_notification(),
             {
-                'action':  CommandType.connected,
-                'datetime': str(dt),
-                'success': True,
-                'reason': '', 
-                'name': 'anon'
+                'action': CommandType.connected,
+                'datetime': str(datetime.now()),
+                'payload': {'user_name': 'anonymus'},
+                'reason': '',
+                'success': True
             }
         )
     

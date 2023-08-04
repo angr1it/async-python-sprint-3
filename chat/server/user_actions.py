@@ -20,9 +20,8 @@ from .state.room import RoomStore
 from .state.user import UserStore
 from .state.message import (
     NotificationStore,
-    Register as RegisterNotification,
-    Login as LoginNotification,
-    Logout as LogoutNotification
+    UserAction,
+    Action
 )
 
 from .command import Command
@@ -34,6 +33,17 @@ ALREADY_LOGGED_OUT = 'Already logged out.'
 
 class RegisterAction(Command):
     
+    @staticmethod
+    def __get_notification(username, success, reason = ''):
+        return Action(
+            action=CommandType.register,
+            datetime=str(datetime.now()),
+            expired=False,
+            success=success,
+            reason='',
+            payload={'user_name': username}
+        )
+
     @classmethod
     async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.register:
@@ -48,32 +58,38 @@ class RegisterAction(Command):
         if meta.loggedin:
             await NotificationStore().process(
                 ws=ws_response,
-                notification=RegisterNotification(
-                    action=CommandType.register, datetime=datetime.now(), username=username, success=False, reason=ALREADY_LOGGED_IN, expired=False
-                )
+                notification=RegisterAction.__get_notification(username=username, success=False, reason=ALREADY_LOGGED_IN)
             )
             return meta
 
         if UserStore().register(username=username, password=password).username == username:
             await NotificationStore().process(
                 ws=ws_response,
-                notification=RegisterNotification(
-                    action=CommandType.register, datetime=datetime.now(), username=username, success=True, reason='', expired=False
-                )
+                notification=RegisterAction.__get_notification(username=username, success=True, reason='')
             )
             return meta
         
         await NotificationStore().process(
             ws=ws_response,
-            notification=RegisterNotification(
-                action=CommandType.register, datetime=datetime.now(), username=username, success=False, reason=REGISTER_FAIL, expired=False
-                )
+            notification=RegisterAction.__get_notification(username=username, success=False, reason=REGISTER_FAIL)
             )
 
         return meta
 
 
 class LoginAction(Command):
+    @staticmethod
+    def __get_notification(username, success, reason = ''):
+        return UserAction(
+            action=CommandType.login,
+            datetime=str(datetime.now()),
+            expired=False,
+            success=success,
+            reason=reason,
+            user_name=username,
+            payload={}
+        )
+    
     @classmethod
     async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.login:
@@ -82,9 +98,7 @@ class LoginAction(Command):
         if meta.loggedin:
             await NotificationStore().process(
                 ws=ws_response,
-                notification=LoginNotification(
-                    action=CommandType.login, datetime=datetime.now(), expired=False, user_name=meta.user_name, success=False, reason=ALREADY_LOGGED_IN
-                )
+                notification=LoginAction.__get_notification(username=meta.user_name, success=False, reason=ALREADY_LOGGED_IN)
             )
             return meta
         
@@ -97,9 +111,7 @@ class LoginAction(Command):
         if UserStore().login(username=username, password=password):
             await NotificationStore().process(
                 ws=ws_response,
-                notification=LoginNotification(
-                    action=CommandType.login, datetime=datetime.now(), expired=False, user_name=username, success=True, reason=''
-                )
+                notification=LoginAction.__get_notification(username=username, success=True, reason='')
             )
             
             meta.user_name = username
@@ -108,15 +120,14 @@ class LoginAction(Command):
 
         await NotificationStore().process(
             ws=ws_response,
-            notification=LoginNotification(
-                action=CommandType.login, datetime=datetime.now(), expired=False, user_name=username, success=False, reason=INCORRECT_LOGIN_COMBINATION
-            )
+            notification=LoginAction.__get_notification(username=meta.user_name, success=False, reason=INCORRECT_LOGIN_COMBINATION)
         )
 
         return meta
 
 
 class LogoutAction(Command):
+
     @classmethod
     async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.logout:
@@ -125,21 +136,34 @@ class LogoutAction(Command):
         if not meta.loggedin:
             await NotificationStore().process(
                 ws=ws_response,
-                notification=LogoutNotification(
-                    action=CommandType.logout, datetime=datetime.now(), expired=False, user_name=meta.user_name, success=False, reason=ALREADY_LOGGED_OUT
+                notification=UserAction(
+                    action=CommandType.logout,
+                    datetime=str(datetime.now()),
+                    expired=False,
+                    success=False,
+                    reason=ALREADY_LOGGED_OUT,
+                    user_name=meta.user_name,
+                    payload={}
                 )
             )
             return meta
-
+        
+        user_before = meta.user_name
         if UserStore().logout(username=meta.user_name):
-
+            
             meta.user_name = UserStore().get_anonymus_name()
             meta.loggedin = False
 
             await NotificationStore().process(
                 ws=ws_response,
-                notification=LogoutNotification(
-                    action=CommandType.logout, datetime=datetime.now(), expired=False, user_name=meta.user_name, success=True, reason=''
+                notification=UserAction(
+                    action=CommandType.logout,
+                    datetime=str(datetime.now()),
+                    expired=False,
+                    success=True,
+                    reason='',
+                    user_name=user_before,
+                    payload={}
                 )
             )
             return meta

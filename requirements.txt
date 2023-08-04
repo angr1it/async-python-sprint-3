@@ -5,3 +5,4 @@ aiounittest
 asyncmock
 freezegun
 mock
+pydantic

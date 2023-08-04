@@ -22,7 +22,8 @@ from chat.client.client_commands import (
     LogoutCommand,
     OpenDialogueCommand,
     DeleteRoomCommand,
-    DeleteDialogueCommand
+    DeleteDialogueCommand,
+    SendPrivateCommand
 )
 
 from chat.command_types import CommandType
@@ -51,8 +52,15 @@ class TestClientCommands(aiounittest.AsyncTestCase):
             command=CommandType.send,
             content=SendRequests.SEND_COMMAND.value
         )
-
         self.assertIsNone(self.mock_ws.send_json.assert_called_with(SendRequests.SEND_JSON_REQ.value))
+
+        await SendPrivateCommand().run(
+            websocket=self.mock_ws,
+            command=CommandType.send_private,
+            content=SendRequests.SEND_PRIVATE_COMMAND.value
+        )
+
+        self.assertIsNone(self.mock_ws.send_json.assert_called_with(SendRequests.SEND_PRIVATE_JSON_REQ.value))
 
     async def test_history(self):
 

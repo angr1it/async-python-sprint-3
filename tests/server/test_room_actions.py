@@ -75,13 +75,14 @@ class TestServerActions(aiounittest.AsyncTestCase):
         )
         self.assertIsNone(self.mock_ws.send_json.assert_called_with(CreateOpenRoomRequests.CREATE_JSON_RESP_SUCCESS.value))
 
-        with self.assertRaises(NoRegistredUserFound):
-            await JoinRoomAction().run(
-                ws_response=self.mock_ws,
-                meta=self.meta_anon,
-                command=CommandType.join_room,
-                message_json=JoinOpenRequests.REQ.value,
-            )
+        
+        await JoinRoomAction().run(
+            ws_response=self.mock_ws,
+            meta=self.meta_anon,
+            command=CommandType.join_room,
+            message_json=JoinOpenRequests.REQ.value,
+        )
+        self.assertIsNone(self.mock_ws.send_json.assert_called_with(JoinOpenRequests.RESP_ANON.value))
 
         await JoinRoomAction().run(
             ws_response=self.mock_ws,
@@ -142,14 +143,6 @@ class TestServerActions(aiounittest.AsyncTestCase):
         )
         self.assertIsNone(self.mock_ws.send_json.assert_called_with(RestrictedRoomRequests.ADD_USER_RESP_SUCCESS.value))
         self.assertFalse(RoomStore().user_in_room(username=self.user2.username, room=RoomStore().get_room_by_name(RestrictedRoomRequests.CREATE_ROOM_REQ.value['room_name'])))
-
-        with self.assertRaises(NoRegistredUserFound):
-            await JoinRoomAction().run(
-                ws_response=self.mock_ws,
-                meta=self.meta_anon,
-                command=CommandType.join_room,
-                message_json=RestrictedRoomRequests.JOIN_REQ.value
-            )
 
         await JoinRoomAction().run(
             ws_response=self.mock_ws,

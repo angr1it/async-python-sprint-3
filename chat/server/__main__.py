@@ -1,30 +1,9 @@
 import logging
-import random
 from collections import defaultdict
-import asyncio
-from datetime import datetime
 from aiohttp import web
 from aiohttp.http_websocket import WSCloseCode, WSMessage
 from aiohttp.web_request import Request
 import uuid
-
-from .room_actions import (
-    JoinRoomAction,
-    LeaveRoomAction,
-    CreateRoomAction,
-    DeleteRoomAction,
-    AddUserAction,
-    RemoveUserAction
-)
-from .user_actions import (
-    RegisterAction,
-    LoginAction,
-    LogoutAction
-)
-from .message_actions import (
-    SendAction,
-    HistoryAction,
-)
 
 from .state.meta import Meta
 from .state.user import (
@@ -32,9 +11,10 @@ from .state.user import (
 )
 from .state.message import (
     NotificationStore,
-    ConnectAnon,
-    AnyError
+    get_connected_notification,
+    get_error_message
 )
+from .state.room import RoomStore
 
 from ..exceptions import *
 from ..command_types import CommandType
@@ -90,14 +70,7 @@ async def ws_chat(request: Request) -> web.WebSocketResponse:
 
     await NotificationStore().process(
         ws=current_websocket,
-        notification=ConnectAnon(
-            action=CommandType.connected,
-            datetime=datetime.now(),
-            success=True,
-            reason='',
-            name=meta.user_name,
-            expired=False
-        )
+        notification=get_connected_notification(meta.user_name)
     )
 
     request.app['websockets'][meta.key] = current_websocket
@@ -117,18 +90,18 @@ async def ws_chat(request: Request) -> web.WebSocketResponse:
                     except BadRequest:
                         await NotificationStore().process(
                             ws=current_websocket, 
-                            notification=AnyError(CommandType.error, datetime.now(), expired=False, success=False, reason='Bad request.')
+                            notification=get_error_message(reason='Bad request.')
                         )
                     except NoRegistredUserFound:
                         await NotificationStore().process(
-                            ws=current_websocket, 
-                            notification=AnyError(CommandType.error, datetime.now(), expired=False, success=False, reason='Cannot apply this operation to anonymus user.')
+                            ws=current_websocket,
+                            notification=get_error_message(reason='Cannot apply this operation to anonymus user.')
                         )
-                    except:
+                    """except:
                         await NotificationStore().process(
-                            ws=current_websocket, 
-                            notification=AnyError(CommandType.error, datetime.now(), expired=False, success=False, reason='Unknown error.')
-                        )
+                            ws=current_websocket,
+                            notification=get_error_message(reason='Unknown error.')
+                        )"""
     
     finally:
         request.app['websockets'].pop(meta.key)
@@ -143,8 +116,9 @@ async def init_app() -> web.Application:
     app = web.Application()
     app['websockets'] = defaultdict(dict)
 
-    await NotificationStore().load()
     await UserStore().load()
+    await RoomStore().load()
+    await NotificationStore().load()
 
     app.on_shutdown.append(shutdown)
     app.add_routes([web.get('/echo', handler=ws_echo)])
@@ -154,8 +128,11 @@ async def init_app() -> web.Application:
 
 async def shutdown(app):
     # CTRL+C in order to save the data on app close
-    await NotificationStore().dump()
+    
+    
     await UserStore().dump()
+    await RoomStore().dump()
+    await NotificationStore().dump()
 
     for room in app['websockets']:
         for ws in app['websockets'][room].values():

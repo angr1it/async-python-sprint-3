@@ -17,7 +17,8 @@ from ..exceptions import (
 
 logger = logging.getLogger()
 
-SEND_PARSE_ERR = "/send <room_name> <to_username> <private := (True/False)> <message> --required format"
+SEND_PARSE_ERR = "/send <room_name> <message> --required format"
+SEND_PRIVATE_PARSE_ERR = "/send_private <to_username> <message> --required format"
 HISTORY_PARSE_ERR = "/history [n] [room_name]  --required format"
 CREATE_ROOM_PARSE_ERR = '/create_room <room_name> <room_type> --required format'
 ADD_USER_PARSE_ERR = '/add_user <room_name> <user_name> --required format'
@@ -51,14 +52,34 @@ class SendCommand(Command):
             raise CommandArgError('SendCommand: content is empty!')
         
         try:
-            room, to_user, private_str, message  = content.split(' ', 3)
-            private = private_str == 'True'
+            room, message  = content.split(' ', 1)
         except:
             logger.info(SEND_PARSE_ERR)
             return
         
-        await websocket.send_json({'command': command, 'message': message, 'room': room, 'private': private, 'to_user': to_user})
+        await websocket.send_json({'command': command, 'message': message, 'room': room, 'private': False, 'to_user': '/all'})
 
+class SendPrivateCommand(Command):
+    @classmethod
+    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+        super().run(websocket, command)
+
+        if not command == CommandType.send_private:
+            raise UnsuitableCommand
+        
+        if not content:
+            raise CommandArgError('SendCommand: content is None!')
+        if len(content) == 0:
+            raise CommandArgError('SendCommand: content is empty!')
+        
+        try:
+            to_user, message  = content.split(' ', 1)
+        except:
+            logger.info(SEND_PARSE_ERR)
+            return
+        
+        await websocket.send_json({'command': CommandType.send, 'message': message, 'room': '', 'private': True, 'to_user': to_user})
+    
 class HistoryCommand(Command):
     @classmethod
     async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
@@ -73,7 +94,7 @@ class HistoryCommand(Command):
             content = ''
         
         try:
-            n_str, room = content.split(' ', 1)
+            room, n_str = content.split(' ', 1)
             n = int(n_str)
         except ValueError as ex:
             try:
@@ -81,8 +102,6 @@ class HistoryCommand(Command):
             except:
                 pass
         
-
-
         await websocket.send_json({'command': command, 'room': room, 'n': n})
 
 class CreateRoomCommand(Command):
