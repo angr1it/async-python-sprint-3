@@ -118,5 +118,5 @@ class UserStore:
         except Exception as ex:
             logger.error(f'Unable load users from {path}, because: {ex}.')
 
-    def get_user_list(self):
+    def get_user_list(self):    
         return self.store.keys()

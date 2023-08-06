@@ -1,8 +1,7 @@
 from typing import Dict
 import logging
-from aiohttp import web
 
-
+from ..utils.my_response import WSResponse
 from ..command_types import CommandType
 from ..exceptions import (
     UnsuitableCommand,
@@ -22,7 +21,7 @@ logger = logging.getLogger()
 class SendAction(Command):
 
     @classmethod
-    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls, ws_response: WSResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
     
         if not command == CommandType.send:
             raise UnsuitableCommand
@@ -47,7 +46,7 @@ class SendAction(Command):
 
 class HistoryAction(Command):
     @classmethod
-    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls, ws_response: WSResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.history:
             raise UnsuitableCommand
         

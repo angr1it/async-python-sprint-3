@@ -1,8 +1,8 @@
 import aiounittest
-from aiohttp.test_utils import make_mocked_coro
 from unittest.mock import MagicMock
 import uuid
 from freezegun import freeze_time
+
 
 from chat.server.state.user import (
     UserStore
@@ -35,13 +35,14 @@ from chat.exceptions import (
     UnknownError,
     NoRegistredUserFound
 )
+from chat.utils.async_mock import AsyncMock
 
 class TestServerActions(aiounittest.AsyncTestCase):
 
     def setUp(self) -> None:
         
         self.mock_ws = MagicMock()
-        self.mock_ws.send_json = make_mocked_coro()
+        self.mock_ws.send_json = AsyncMock()
 
         self.meta_anon = Meta(key=uuid.uuid4(), user_name='anonymus_12314', loggedin=False)
 
@@ -199,7 +200,7 @@ class TestServerActions(aiounittest.AsyncTestCase):
 
         await OpenDialogueAction().run(
             ws_response=self.mock_ws,
-            meta=self.meta_user1,
+            meta=self.meta_user2,
             command=CommandType.open_dialogue,
             message_json=OpenDialogueRequests.OPEN_JSON_REQ.value
         )
@@ -225,7 +226,7 @@ class TestServerActions(aiounittest.AsyncTestCase):
 
         await DeleteDialogueAction().run(
             ws_response=self.mock_ws,
-            meta=self.meta_user2,
+            meta=self.meta_user1,
             command=CommandType.delete_dialogue,
             message_json=OpenDialogueRequests.DELETE_JSON_REQ.value
         )

@@ -39,7 +39,8 @@ class Room:
     deleted: bool
 
     def __post_init__(self):
-        self.key = uuid.uuid4()
+        if not self.key:
+            self.key = uuid.uuid4()
 
         for admin in self.admins:
             if not admin in self.allowed:

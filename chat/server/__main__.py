@@ -1,9 +1,8 @@
 import logging
-from collections import defaultdict
-from aiohttp import web
-from aiohttp.http_websocket import WSCloseCode, WSMessage
-from aiohttp.web_request import Request
 import uuid
+import asyncio
+from asyncio import StreamReader, StreamWriter
+from ..utils.my_response import WSResponse
 
 from .state.meta import Meta
 from .state.user import (
@@ -26,121 +25,69 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('server')
 
 
-async def ws_echo(request: Request) -> web.WebSocketResponse:
-    """
-    Echo service to send back the JSON sent to this endpoint, but wrapped in {'echo': <input>}
-
-    :param request: Request object
-    :return: The websocket response
-    """
-    websocket = web.WebSocketResponse()
-
-    ready = websocket.can_prepare(request=request)
-    if not ready:
-        await websocket.close(code=WSCloseCode.PROTOCOL_ERROR)
-
-    await websocket.prepare(request)
-
-    async for message in websocket:
-        if isinstance(message, WSMessage):
-            if message.type == web.WSMsgType.text:
-                message_json = message.json()
-                logger.info('> Received: %s', message_json)
-                echo = {'echo': message_json}
-                await websocket.send_json(echo)
-                logger.info('< Sent: %s', echo)
-
-    return websocket
-
-async def ws_chat(request: Request) -> web.WebSocketResponse:
-    """
-    Chat backend. Add it to the route like this:
-        - app.add_routes([web.get('/chat', handler=ws_chat)])
-
-    :param request: Request object
-    :return: Websocket response
-    """
-    current_websocket = web.WebSocketResponse(autoping=True, heartbeat=60)
-
-    ready = current_websocket.can_prepare(request=request)
-    if not ready:
-        await current_websocket.close(code=WSCloseCode.PROTOCOL_ERROR)
-    await current_websocket.prepare(request)
-
+async def handle_client(reader: StreamReader, writer: StreamWriter):
+    
     username = UserStore().get_anonymus_name()
     meta = Meta(uuid.uuid5, username, False)
 
+    websocket = WSResponse(reader=reader, writer=writer)
+    
     await NotificationStore().process(
-        ws=current_websocket,
+        ws=websocket,
         notification=get_connected_notification(meta.user_name)
     )
-
-    request.app['websockets'][meta.key] = current_websocket
-
-    commands = init_commands()
-
-    try:
-        async for message in current_websocket:
-            if isinstance(message, WSMessage):
-                if message.type == web.WSMsgType.text:
-                    
-                    try:
-                        message_json = message.json()
-                        command_str = message_json.get('command')
-                    
-                        meta = await commands[command_str].run(ws_response = current_websocket, meta = meta, command = command_str, message_json = message_json)
-                    except BadRequest:
-                        await NotificationStore().process(
-                            ws=current_websocket, 
-                            notification=get_error_message(reason='Bad request.')
-                        )
-                    except NoRegistredUserFound:
-                        await NotificationStore().process(
-                            ws=current_websocket,
-                            notification=get_error_message(reason='Cannot apply this operation to anonymus user.')
-                        )
-                    except:
-                        await NotificationStore().process(
-                            ws=current_websocket,
-                            notification=get_error_message(reason='Unknown error.')
-                        )
     
-    finally:
-        request.app['websockets'].pop(meta.key)
+    commads = init_commands()
     
-    return current_websocket
+    while True:
+        message = await websocket.receive_json()
+        command_str = message.get('command')
+        
+        try:
+            meta = await commads[command_str].run(
+                ws_response=websocket,
+                meta=meta,
+                command=command_str,
+                message_json=message
+            )
+        except BadRequest:
+            await NotificationStore().process(
+                ws=websocket, 
+                notification=get_error_message(reason='Bad request.')
+            )
+        except NoRegistredUserFound:
+            await NotificationStore().process(
+                ws=websocket,
+                notification=get_error_message(reason='Cannot apply this operation to anonymus user.')
+            )
+        except:
+            await NotificationStore().process(
+                ws=websocket,
+                notification=get_error_message(reason='Unknown error.')
+            )
 
-async def init_app() -> web.Application:
-    """
-    Creates an backend app object with a 'websockets' dict on it, where we can store open websocket connections.
-    :return: The app
-    """
-    app = web.Application()
-    app['websockets'] = defaultdict(dict)
 
+async def init_app(host, port):
     await UserStore().load()
     await RoomStore().load()
     await NotificationStore().load()
 
-    app.on_shutdown.append(shutdown)
-    app.add_routes([web.get('/echo', handler=ws_echo)])
-    app.add_routes([web.get('/chat', handler=ws_chat)])  
-    app.update()
-    return app
+    server = await asyncio.start_server(handle_client, host, port)
+    
+    async with server:
+        await server.serve_forever()
 
-async def shutdown(app):
-    # CTRL+C in order to save the data on app close
-    
-    
+async def shutdown():
+    logger.info('Shutting down server...')
     await UserStore().dump()
     await RoomStore().dump()
     await NotificationStore().dump()
 
-    for room in app['websockets']:
-        for ws in app['websockets'][room].values():
-            ws.close()
-    app['websockets'].clear()
 
+HOST, PORT = "", 8000
 
 if __name__ == '__main__':
-    web.run_app(init_app())
+    try:
+        asyncio.run(init_app(HOST, PORT))
+    except KeyboardInterrupt:
+        asyncio.run(shutdown())

@@ -96,11 +96,11 @@ class RestrictedRoomRequests(Enum):
     LEAVE_ROOM_SUCCESS = {'action': CommandType.leave_room, 'datetime': test_dt, 'success': True, 'reason': '', 'room_name': 'restricted_room', 'remove_user': 'user2'}
 
 class OpenDialogueRequests(Enum):
-    OPEN_COMMAND = 'user2'
-    OPEN_JSON_REQ = {'command': CommandType.open_dialogue, 'with_user': 'user2'}
+    OPEN_COMMAND = 'user1'
+    OPEN_JSON_REQ = {'command': CommandType.open_dialogue, 'with_user': 'user1'}
     OPEN_JSON_RESP_SUCCESS = {'action': CommandType.open_dialogue, 'success': True, 'reason': '', 'datetime': test_dt, 'user': 'user2', 'payload': {'with_user': 'user1'}}
 
-    DELETE_COMMAND = 'user1'
-    DELETE_JSON_REQ = {'command': CommandType.delete_dialogue, 'with_user': 'user1'}
-    DELETE_JSON_RESP_ERR = {'action': CommandType.delete_dialogue, 'success': False, 'reason': 'No dialogue found.', 'datetime': test_dt, 'user': 'user3', 'payload': {'with_user': 'user1'}}
+    DELETE_COMMAND = 'user2'
+    DELETE_JSON_REQ = {'command': CommandType.delete_dialogue, 'with_user': 'user2'}
+    DELETE_JSON_RESP_ERR = {'action': CommandType.delete_dialogue, 'success': False, 'reason': 'No dialogue found.', 'datetime': test_dt, 'user': 'user3', 'payload': {'with_user': 'user2'}}
     DELETE_JSON_RESP_SUCCESS = {'action': CommandType.delete_dialogue, 'success': True, 'reason': '', 'datetime': test_dt, 'user': 'user1', 'payload': {'with_user': 'user2'}}

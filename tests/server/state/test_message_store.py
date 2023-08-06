@@ -1,11 +1,6 @@
 import aiounittest
-from asyncmock import AsyncMock
-
-import unittest
-from unittest.mock import patch, MagicMock
-from aiohttp import web
+from unittest.mock import MagicMock
 from datetime import datetime
-import dataclasses
 from freezegun import freeze_time
 
 from chat.server.state.room import (
@@ -13,7 +8,7 @@ from chat.server.state.room import (
     RoomStore,
     RoomType
 )
-
+from chat.utils.async_mock import AsyncMock
 from chat.server.state.user import (
     User,
     UserStore
@@ -21,7 +16,6 @@ from chat.server.state.user import (
 
 from chat.server.state.message import (
     NotificationStore,
-    RoomAction,
     get_message_notification
 )
 from chat.server.message_actions import SendAction
@@ -32,14 +26,21 @@ from chat.command_types import CommandType
 from chat.requests_examples import (
     test_dt_str
 )
+
+from chat.utils.my_response import WSResponse
 class TestMessageStore(aiounittest.AsyncTestCase):
 
+    def setUp(self) -> None:
+                
+        self.ws_response = MagicMock()
+        self.ws_response.send_json = AsyncMock()
+        
     def tearDown(self) -> None:
+
         singleton.instances = {}
 
-    @patch('aiohttp.web.WebSocketResponse', new_callable=AsyncMock(web.WebSocketResponse))
     @freeze_time(test_dt_str)
-    async def test_store(self, ws_response):
+    async def test_store(self):
 
         user = UserStore().register(username='user', password='123')
 
@@ -53,12 +54,12 @@ class TestMessageStore(aiounittest.AsyncTestCase):
         ))
 
         await NotificationStore().process(
-            ws=ws_response,
+            ws=self.ws_response,
             notification=get_message_notification(room_name=room.name, user_name=user.username, success=True, reason='',private=False, to='', message='Hello, world!')
         )
 
         await NotificationStore().process(
-            ws=ws_response,
+            ws=self.ws_response,
             notification=get_message_notification(room_name=room.name, user_name=user.username, success=True, reason='',private=False, to='', message='Hello, hello!')
         )
 

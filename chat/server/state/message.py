@@ -1,15 +1,16 @@
 from typing import List, Dict
 import logging
 from datetime import datetime
-from aiohttp import web
 
 from pydantic.dataclasses import dataclass
 from pydantic.tools import parse_obj_as
 import dataclasses
 import json
 
+
 from ...singleton import singleton
 from ...command_types import CommandType
+from ...utils.my_response import WSResponse
 
 from .room import Room, RoomStore
 from .user import UserStore, User
@@ -152,20 +153,27 @@ class NotificationStore:
                 return
         
         if issubclass(type(action), RoomAction):
-
+            if action.payload['private']:
+                room = RoomStore().find_private_room(
+                    user1=UserStore().get_user(action.user_name),
+                    user2=UserStore().get_user(action.payload['to'])
+                )
+            else:
+                room = RoomStore().get_room_by_name(action.room_name)
+                
             try:
-                self.store['rooms'][RoomStore().get_room_by_name(action.room_name).key].append(action)
+                self.store['rooms'][room.key].append(action)
             except KeyError:
-                self.store['rooms'][RoomStore().get_room_by_name(action.room_name).key] = list()
-                self.store['rooms'][RoomStore().get_room_by_name(action.room_name).key].append(action)
+                self.store['rooms'][room.key] = list()
+                self.store['rooms'][room.key].append(action)
             return
 
         self.store['other'].append(action)
 
-    async def __send(self, ws: web.WebSocketResponse, mssg: Dict):
+    async def __send(self, ws: WSResponse, mssg: Dict):
         await ws.send_json(mssg)
      
-    async def process(self, ws: web.WebSocketResponse, notification: Action):
+    async def process(self, ws: WSResponse, notification: Action):
 
         if issubclass(type(notification), RoomAction):
             try:
@@ -205,7 +213,7 @@ class NotificationStore:
         except:
             raise NoRegistredUserFound
         
-    async def history_room(self, ws: web.WebSocketResponse, user_name: str,  room: Room, n: int = 20) -> bool:
+    async def history_room(self, ws: WSResponse, user_name: str,  room: Room, n: int = 20) -> bool:
         
         if room is None:
             return ValueError
@@ -222,7 +230,7 @@ class NotificationStore:
    
         return True
 
-    async def history_user(self, ws: web.WebSocketResponse, user: User, n: int = 20) -> bool:
+    async def history_user(self, ws: WSResponse, user: User, n: int = 20) -> bool:
         
         if user is None:
             return ValueError
@@ -283,4 +291,3 @@ class NotificationStore:
             
         except Exception as ex:
             logger.error(f'Unable load users from {path}, because: {ex}.')
-            raise ex

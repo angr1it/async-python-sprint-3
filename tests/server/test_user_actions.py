@@ -1,8 +1,8 @@
 import aiounittest
-from aiohttp.test_utils import make_mocked_coro
 from unittest.mock import MagicMock
 import uuid
 from freezegun import freeze_time
+import unittest.mock
 
 from chat.server.state.user import (
     UserStore
@@ -24,12 +24,18 @@ from chat.requests_examples import (
 )
 from chat.singleton import singleton
 
+
+class AsyncMock(MagicMock):
+    async def __call__(self, *args, **kwargs):
+        return super(AsyncMock, self).__call__(*args, **kwargs)
+    
+    
 class TestServerActions(aiounittest.AsyncTestCase):
 
     def setUp(self) -> None:
         
         self.mock_ws = MagicMock()
-        self.mock_ws.send_json = make_mocked_coro()
+        self.mock_ws.send_json = AsyncMock()
 
         self.meta = Meta(key=uuid.uuid4(), user_name='anonymus_12314', loggedin=False)
     
@@ -37,6 +43,7 @@ class TestServerActions(aiounittest.AsyncTestCase):
         singleton.instances = {}
 
     @freeze_time(test_dt_str)
+
     async def test_register(self):
 
         await RegisterAction().run(

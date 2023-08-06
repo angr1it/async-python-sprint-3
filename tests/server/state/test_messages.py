@@ -9,8 +9,6 @@ from chat.server.state.room import (
 from chat.server.state.user import User
 
 from chat.server.state.message import (
-    RoomAction,
-    Action,
     get_message_notification
 )
 from chat.command_types import CommandType

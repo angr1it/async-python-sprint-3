@@ -1,5 +1,4 @@
 from typing import List
-from aiohttp import ClientWebSocketResponse
 import logging
 import os
 
@@ -12,7 +11,7 @@ from ..exceptions import (
     CommandArgError,
     EmptyCommand
 )
-
+from ..utils.my_response import WSResponse
 logger = logging.getLogger()
 
 SEND_PARSE_ERR = "/send <room_name> <message> --required format"
@@ -30,7 +29,7 @@ PUBLISH_FILE_PARSE_ERR = '/publish_file <path> [user1] [user2]...[usern] --requi
 
 class Command:
     @classmethod
-    def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         if not websocket:
             raise RuntimeError(f'websocket is none!')
         if command == None:
@@ -40,7 +39,7 @@ class Command:
 
 class HelpCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.help:
@@ -50,7 +49,7 @@ class HelpCommand(Command):
         
 class SendCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.send:
@@ -71,7 +70,7 @@ class SendCommand(Command):
 
 class SendPrivateCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.send_private:
@@ -92,7 +91,7 @@ class SendPrivateCommand(Command):
     
 class HistoryCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.history:
@@ -120,7 +119,7 @@ class HistoryCommand(Command):
 
 class CreateRoomCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.create_room:
@@ -136,7 +135,7 @@ class CreateRoomCommand(Command):
 
 class JoinRoomCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.join_room:
@@ -152,7 +151,7 @@ class JoinRoomCommand(Command):
 
 class AddUserCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.add_user:
@@ -168,7 +167,7 @@ class AddUserCommand(Command):
 
 class RemoveUserCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.remove_user:
@@ -184,7 +183,7 @@ class RemoveUserCommand(Command):
     
 class LeaveRoomCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.leave_room:
@@ -200,7 +199,7 @@ class LeaveRoomCommand(Command):
 
 class RegisterCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.register:
@@ -216,7 +215,7 @@ class RegisterCommand(Command):
 
 class LoginCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.login:
@@ -232,7 +231,7 @@ class LoginCommand(Command):
 
 class LogoutCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.logout:
@@ -242,7 +241,7 @@ class LogoutCommand(Command):
 
 class QuitCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.quit:
@@ -253,7 +252,7 @@ class QuitCommand(Command):
 class DeleteRoomCommand(Command):
 
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.delete_room:
@@ -263,7 +262,7 @@ class DeleteRoomCommand(Command):
 
 class OpenDialogueCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.open_dialogue:
@@ -273,7 +272,7 @@ class OpenDialogueCommand(Command):
 
 class DeleteDialogueCommand(Command):
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.delete_dialogue:
@@ -284,7 +283,7 @@ class DeleteDialogueCommand(Command):
 class PublishFileCommand(Command):
 
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.publish_file:
@@ -303,7 +302,7 @@ class PublishFileCommand(Command):
 class LoadFileCommand(Command):
 
     @classmethod
-    async def run(cls, websocket: ClientWebSocketResponse, command: str = None, content: str = None):
+    async def run(cls, websocket: WSResponse, command: str = None, content: str = None):
         super().run(websocket, command)
 
         if not command == CommandType.load_file:

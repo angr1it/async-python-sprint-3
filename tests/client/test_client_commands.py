@@ -1,14 +1,7 @@
 import aiounittest
-from asyncmock import AsyncMock
-from aiohttp.test_utils import make_mocked_coro, make_mocked_request
+from unittest.mock import MagicMock
 
-import unittest
-from unittest.mock import patch, MagicMock
-from aiohttp import ClientWebSocketResponse
-from datetime import datetime
-import dataclasses
-
-
+from chat.utils.async_mock import AsyncMock
 from chat.client.client_commands import (
     SendCommand,
     HistoryCommand,
@@ -38,12 +31,13 @@ from chat.requests_examples import (
     LogoutRequests,
     OpenDialogueRequests
 )
+
 class TestClientCommands(aiounittest.AsyncTestCase):
 
     def setUp(self) -> None:
         
         self.mock_ws = MagicMock()
-        self.mock_ws.send_json = make_mocked_coro()
+        self.mock_ws.send_json = AsyncMock()
     
     async def test_send(self):
         
@@ -184,6 +178,7 @@ class TestClientCommands(aiounittest.AsyncTestCase):
             websocket=self.mock_ws,
             command=CommandType.delete_dialogue,
             content=OpenDialogueRequests.DELETE_COMMAND.value
+
         )
 
         self.assertIsNone(self.mock_ws.send_json.assert_called_with(OpenDialogueRequests.DELETE_JSON_REQ.value))

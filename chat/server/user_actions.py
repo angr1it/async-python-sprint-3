@@ -1,13 +1,12 @@
 from typing import Dict
 import logging
 from datetime import datetime
-from aiohttp import web
 from datetime import datetime
 
 logger = logging.getLogger()
 
 from ..command_types import CommandType
-
+from ..utils.my_response import WSResponse
 from ..exceptions import (
     UnsuitableCommand,
     BadRequest,
@@ -42,7 +41,7 @@ class RegisterAction(Command):
         )
 
     @classmethod
-    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls, ws_response: WSResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.register:
             raise UnsuitableCommand
         
@@ -88,7 +87,7 @@ class LoginAction(Command):
         )
     
     @classmethod
-    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls, ws_response: WSResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.login:
             raise UnsuitableCommand
 
@@ -126,7 +125,7 @@ class LoginAction(Command):
 class LogoutAction(Command):
 
     @classmethod
-    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls, ws_response: WSResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.logout:
             raise UnsuitableCommand
         

@@ -1,10 +1,11 @@
 import aiounittest
-from asyncmock import AsyncMock
-from aiohttp.test_utils import make_mocked_coro, make_mocked_request
+
 from unittest.mock import MagicMock, patch
 import uuid
 from freezegun import freeze_time
+import unittest.mock
 
+from chat.utils.async_mock import AsyncMock
 from chat.server.state.user import (
     User,
     UserStore
@@ -25,13 +26,15 @@ from chat.requests_examples import (
     CreateOpenRoomRequests
 )
 from chat.singleton import singleton
+from chat.utils.my_response import WSResponse
+
 
 class TestServerActions(aiounittest.AsyncTestCase):
 
     def setUp(self) -> None:
         
         self.mock_ws = MagicMock()
-        self.mock_ws.send_json = make_mocked_coro()
+        self.mock_ws.send_json = AsyncMock()
 
         user = UserStore().register(username='andre', password='123')
         self.meta = Meta(key=uuid.uuid4(), user_name=user.username, loggedin=True)

@@ -3,10 +3,8 @@ import logging
 from typing import Coroutine
 
 from aioconsole import ainput
-from aiohttp import ClientSession, ClientWebSocketResponse
-from aiohttp.http_websocket import WSMessage
-from aiohttp.web import WSMsgType
-
+import asyncio
+from ..utils.my_response import WSResponse
 
 from .client_commands import (
     CommandArgError, 
@@ -22,30 +20,24 @@ logger = logging.getLogger('client')
 
 DOWNLOADS_FOLDER = './client_data/downloads'
 
-async def subscribe_to_messages(websocket: ClientWebSocketResponse) -> None:
-    """
-    A subscription handler to subscribe to messages. Simply logs them. 
+async def subscribe_to_messages(websocket: WSResponse) -> None:
     
-    :param websocket: Websocket connection
-    :return: None, forever living task
-    """
-    async for message in websocket:
-        if isinstance(message, WSMessage):
-            if message.type == WSMsgType.text:
-                data = message.json()
-                logger.info('> Message: %s', data)
+    while True:
+        
+        data = await websocket.receive_json()
+        logger.info('> Message: %s', data)
+        
+        try:
+            if data['action'] == CommandType.load_file and data['success']:
+                await receive_file(ws=websocket, dir=DOWNLOADS_FOLDER, filename=data['payload']['filename'])
 
-                try:
-                    if data['action'] == CommandType.load_file and data['success']:
-                        await receive_file(ws=websocket, dir=DOWNLOADS_FOLDER, filename=data['payload']['filename'])
+                logger.info('Loaded.')
 
-                        logger.info('Loaded.')
+        except Exception as ex:
+            logger.error(ex)
+            logger.info('File was lost somehow...')
 
-                except Exception as ex:
-                    logger.error(ex)
-                    logger.info('File was lost somehow...')
-
-async def ping(websocket: ClientWebSocketResponse) -> None:
+async def ping(websocket) -> None:
 
     while True:
         logger.debug('< PING')
@@ -55,19 +47,13 @@ async def ping(websocket: ClientWebSocketResponse) -> None:
 async def console_input() -> Coroutine[str, str, str]:
     return await ainput('<<<')
 
-async def handle_input(websocket: ClientWebSocketResponse, input: Coroutine[str, str, str] = console_input) -> None:
-    """
-    Reads input from input-coroutine and chooses which request send to server;
+async def handle_input(websocket: WSResponse, input: Coroutine[str, str, str] = console_input) -> None:
 
-    :param websocket: Websocket connection
-    :param input: Coroutine that handles inputs -- yields str
-    :return:
-    """
     commands = init_commands()
 
     while True:
         message = await input()
-
+        print(message)
         try:
             str_command, content = message.split(' ', 1)
         except ValueError:
@@ -84,25 +70,23 @@ async def handle_input(websocket: ClientWebSocketResponse, input: Coroutine[str,
             logger.info('Wrong command! Look for /help!')
         
 
-async def handler(nick: str = None, room: str = None) -> None:
+async def init_connection():
+    reader, writer = await asyncio.open_connection('127.0.0.1', 8000)
 
-    async with ClientSession() as session:
-        async with session.ws_connect('ws://0.0.0.0:8080/chat', ssl=False) as ws:
-            read_message_task = asyncio.create_task(subscribe_to_messages(websocket=ws))
-            
-            ping_task = asyncio.create_task(ping(websocket=ws))
-            send_input_message_task = asyncio.create_task(handle_input(websocket=ws))
-
-
-            done, pending = await asyncio.wait(
-                [read_message_task, ping_task, send_input_message_task], return_when=asyncio.FIRST_COMPLETED,
-            )
-
-            if not ws.closed:
-                await ws.close()
-
-            for task in pending:
-                task.cancel()
+    return WSResponse(reader=reader, writer=writer)
+    
 
 if __name__ == '__main__':
-    asyncio.run(handler(nick='', room=''))
+    
+    loop = asyncio.new_event_loop()
+    
+    ws = loop.run_until_complete(init_connection())
+    
+    tasks = [
+        loop.create_task(handle_input(websocket=ws)),
+        loop.create_task(subscribe_to_messages(websocket=ws)),
+        
+    ]
+    
+    loop.run_until_complete(asyncio.wait(tasks))
+    loop.close()

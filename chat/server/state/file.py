@@ -1,12 +1,11 @@
 import logging
-from aiohttp import web
 from dataclasses import dataclass
 import uuid
 from typing import Dict
 
 from ...singleton import singleton
 from ...manage_files import receive_file
-
+from ...utils.my_response import WSResponse
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,7 @@ class FileStore:
         except KeyError:
             return None
         
-    async def publish_file(self, filename: str, ws_response: web.WebSocketResponse) -> File:
+    async def publish_file(self, filename: str, ws_response: WSResponse) -> File:
         
         key = str(uuid.uuid4())
         dir = './server_data/' + key

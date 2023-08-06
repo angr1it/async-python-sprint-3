@@ -1,13 +1,11 @@
 from typing import Dict
 import logging
 from datetime import datetime
-import dataclasses
-from aiohttp import web
 from datetime import datetime
-import uuid
 
 logger = logging.getLogger()
 
+from ..utils.my_response import WSResponse
 from ..command_types import CommandType
 from ..exceptions import (
     UnsuitableCommand,
@@ -51,7 +49,7 @@ class JoinRoomAction(Command):
         )
 
     @classmethod
-    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls, ws_response: WSResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
  
         if not command == CommandType.join_room:
             raise UnsuitableCommand
@@ -96,7 +94,7 @@ class LeaveRoomAction(Command):
         )
     
     @classmethod
-    async def run(cls,ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls,ws_response: WSResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.leave_room:
             raise UnsuitableCommand
         
@@ -139,7 +137,7 @@ class CreateRoomAction(Command):
         )
 
     @classmethod
-    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls, ws_response: WSResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.create_room:
             raise UnsuitableCommand
         
@@ -163,7 +161,7 @@ class CreateRoomAction(Command):
 
         room = RoomStore().add_room(
             room=Room(
-                key=uuid.uuid4(),
+                key=None,
                 name=room_name,
                 room_type=room_type,
                 admins=[meta.user_name],
@@ -196,7 +194,7 @@ class DeleteRoomAction(Command):
         )
     
     @classmethod
-    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls, ws_response: WSResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.delete_room:
             raise UnsuitableCommand
         
@@ -241,7 +239,7 @@ class AddUserAction(Command):
         )
     
     @classmethod
-    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls, ws_response: WSResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.add_user:
             raise UnsuitableCommand
         
@@ -294,7 +292,7 @@ class RemoveUserAction(Command):
         )
 
     @classmethod
-    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls, ws_response: WSResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.remove_user:
             raise UnsuitableCommand
         
@@ -344,7 +342,7 @@ class OpenDialogueAction(Command):
         )
     
     @classmethod
-    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls, ws_response: WSResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
 
         if not command == CommandType.open_dialogue:
             raise UnsuitableCommand
@@ -360,7 +358,7 @@ class OpenDialogueAction(Command):
         try:
             room = RoomStore().add_room(
                 room=Room(
-                    key=uuid.uuid4,
+                    key=None,
                     name='',
                     room_type=RoomType.private,
                     admins=[meta.user_name, with_user],
@@ -373,11 +371,7 @@ class OpenDialogueAction(Command):
                 ws=ws_response,
                 notification=OpenDialogueAction.get_open_dialogue_notification(user_name=meta.user_name, with_user=with_user, success=True, reason='')
             )
-            await NotificationStore().process(
-                ws=ws_response,
-                notification=OpenDialogueAction.get_open_dialogue_notification(user_name=with_user, with_user=meta.user_name, success=True, reason='')
-            )
-
+        
         except DialogueOpenedAlready:
             await NotificationStore().process(
                 ws=ws_response,
@@ -408,7 +402,7 @@ class DeleteDialogueAction(Command):
         )
 
     @classmethod
-    async def run(cls, ws_response: web.WebSocketResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
+    async def run(cls, ws_response: WSResponse, meta: Meta, command: str = None, message_json: Dict[str, str] = None):
         if not command == CommandType.delete_dialogue:
             raise UnsuitableCommand
         
@@ -437,10 +431,7 @@ class DeleteDialogueAction(Command):
                 ws=ws_response,
                 notification=DeleteDialogueAction.get_open_dialogue_notification(user_name=meta.user_name, with_user=with_user, success=True, reason='')
             )
-            await NotificationStore().process(
-                ws=ws_response,
-                notification=DeleteDialogueAction.get_open_dialogue_notification(user_name=with_user, with_user=meta.user_name, success=True, reason='')
-            )
+
         except NoRoomFound:
             await NotificationStore().process(
                 ws=ws_response,
