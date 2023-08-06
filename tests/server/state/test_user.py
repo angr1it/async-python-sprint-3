@@ -5,43 +5,44 @@ from chat.server.state.user import (
     UserStore,
     WeakPassword,
     UsernameAlreadyInUse,
-    UsernameUnaceptable
+    UsernameUnaceptable,
 )
 from chat.singleton import singleton
 
 
 class TestUserStore(unittest.TestCase):
-
     def tearDown(self) -> None:
-        singleton.instances = {}  
-    
+        singleton.instances = {}
+
     def test_user(self):
-        self.assertRaises(UsernameUnaceptable, User, '/andrew', '12')
-        self.assertRaises(WeakPassword, User, 'andrew', '12')
-        
+        self.assertRaises(UsernameUnaceptable, User, "/andrew", "12")
+        self.assertRaises(WeakPassword, User, "andrew", "12")
+
     def test_user_validate(self):
-        user = User(username='andrew', password='123')
-        self.assertFalse(user.validate('vvv'))
-        self.assertTrue(user.validate('123'))
+        user = User(username="andrew", password="123")
+        self.assertFalse(user.validate("vvv"))
+        self.assertTrue(user.validate("123"))
 
     def test_store_register(self):
-        self.assertRaises(WeakPassword, UserStore().register, 'andrew', '12')
-        self.assertRaises(UsernameUnaceptable, UserStore().register, '/andrew', '1223')
-        UserStore().register(username='andrew', password='123')
-        self.assertRaises(UsernameAlreadyInUse, UserStore().register, 'andrew', '1234')
+        self.assertRaises(WeakPassword, UserStore().register, "andrew", "12")
+        self.assertRaises(
+            UsernameUnaceptable, UserStore().register, "/andrew", "1223"
+        )
+        UserStore().register(username="andrew", password="123")
+        self.assertRaises(
+            UsernameAlreadyInUse, UserStore().register, "andrew", "1234"
+        )
 
     def test_store_login(self):
-        UserStore().register(username='andrew', password='123')
+        UserStore().register(username="andrew", password="123")
 
-        self.assertFalse(UserStore().login(username='andrew', password='1234'))
-        self.assertFalse(UserStore().login(username='andrew1', password='123'))
-        self.assertTrue(UserStore().login(username='andrew', password='123'))
+        self.assertFalse(UserStore().login(username="andrew", password="1234"))
+        self.assertFalse(UserStore().login(username="andrew1", password="123"))
+        self.assertTrue(UserStore().login(username="andrew", password="123"))
 
-        self.assertFalse(UserStore().logout(username='andr'))
-        self.assertTrue(UserStore().logout(username='andrew'))
-
-
+        self.assertFalse(UserStore().logout(username="andr"))
+        self.assertTrue(UserStore().logout(username="andrew"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

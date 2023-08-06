@@ -1,13 +1,14 @@
 from enum import Enum
-DOC = f"""
-    Commands: 
+
+DOC = """
+    Commands:
 
     -- Commands/arguments separated by one space; <> - required, [] -optional
 
     `/send <room_name> <message>` : sends a public message visible inside of current room;
 
     `/send_private <username> <message>`: sends a private message to a specified username; need to /open_dialogue before using this;
-    
+
     `/history [n] [room_name]` : returns last n messages available inside of current room; n = 20 by default; if no room_name passed -- returns user's action history if loggedin.
 
     `/create_room <room_name> <room_type := (/open or /restricted)>` : creates a room with current user as admin (need to be logged in);
@@ -39,41 +40,42 @@ DOC = f"""
     `/load_file <key>` : tries to load a file with specified key;
 
     `/help` : returns this doc.
-    
-    """
 
-class CommandType(str, Enum):  
-    
-    send = '/send'
-    send_private = '/send_private'
-    
-    history = '/history'
+    """  # noqa: E501
 
-    create_room = '/create_room'
-    delete_room = '/delete_room'
 
-    add_user = '/add_user'
-    remove_user = '/remove_user'
+class CommandType(str, Enum):
+    ping = "/ping"
+    send = "/send"
+    send_private = "/send_private"
 
-    join_room = '/join_room'
-    leave_room = '/leave_room'
+    history = "/history"
 
-    open_dialogue = '/open_dialogue'
-    delete_dialogue = '/delete_dialogue'
+    create_room = "/create_room"
+    delete_room = "/delete_room"
 
-    register = '/register'
-    login = '/login'
-    logout = '/logout'
-    
+    add_user = "/add_user"
+    remove_user = "/remove_user"
 
-    publish_file = '/publish_file'
-    load_file = '/load_file'
+    join_room = "/join_room"
+    leave_room = "/leave_room"
 
-    help = '/help'
+    open_dialogue = "/open_dialogue"
+    delete_dialogue = "/delete_dialogue"
 
-    connected = '/connected'
-    error = '/error'
+    register = "/register"
+    login = "/login"
+    logout = "/logout"
 
-    quit = '/quit'
+    publish_file = "/publish_file"
+    load_file = "/load_file"
+
+    help = "/help"
+
+    connected = "/connected"
+    error = "/error"
+
+    quit = "/quit"
+
 
 CommandType.__doc__ = DOC

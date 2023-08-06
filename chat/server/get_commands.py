@@ -1,19 +1,18 @@
 from typing import Dict
 
 
-from ..command_types import CommandType
-from .command import Command
-
-from .message_actions import (
+from chat.command_types import CommandType
+from chat.server.command import Command
+from chat.server.message_actions import (
     SendAction,
     HistoryAction
 )
-from .user_actions import (
+from chat.server.user_actions import (
     LoginAction,
     LogoutAction,
     RegisterAction
 )
-from .room_actions import (
+from chat.server.room_actions import (
     OpenDialogueAction,
     CreateRoomAction,
     DeleteRoomAction,
@@ -29,9 +28,8 @@ from .file_actions import (
 )
 
 
-def init_commands() -> Dict[CommandType,Command]:
+def init_commands() -> Dict[CommandType, Command]:
     commands: Dict[Command] = {}
-
 
     commands[CommandType.send] = SendAction
     commands[CommandType.history] = HistoryAction

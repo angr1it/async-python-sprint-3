@@ -1,6 +1,6 @@
 from typing import Dict
 
-from .client_commands import (
+from chat.client.client_commands import (
     Command,
     SendCommand,
     HistoryCommand,
@@ -19,9 +19,10 @@ from .client_commands import (
     DeleteDialogueCommand,
     SendPrivateCommand,
     HelpCommand,
-    QuitCommand
+    QuitCommand,
 )
-from ..command_types import CommandType
+from chat.command_types import CommandType
+
 
 def init_commands() -> Dict[CommandType, Command]:
     commands: Dict[Command] = {}

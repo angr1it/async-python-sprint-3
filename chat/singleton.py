@@ -6,4 +6,5 @@ def singleton(cls):
         return singleton.instances[cls]
     return getinstance
 
+
 singleton.instances = {}
