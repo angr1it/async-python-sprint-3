@@ -71,11 +71,16 @@ async def init_app(host, port):
     await UserStore().load()
     await RoomStore().load()
     await NotificationStore().load()
-
+    
+    logger.info('Server started. Ctrl+C to shutdown (to save state).')
     server = await asyncio.start_server(handle_client, host, port)
     
     async with server:
-        await server.serve_forever()
+        try:
+            await server.serve_forever()
+        except KeyboardInterrupt:
+            server.close()
+            raise KeyboardInterrupt
 
 async def shutdown():
     logger.info('Shutting down server...')

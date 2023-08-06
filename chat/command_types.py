@@ -1,8 +1,5 @@
 from enum import Enum
-
-class CommandType(str, Enum):
-      
-    """
+DOC = f"""
     Commands: 
 
     -- Commands/arguments separated by one space; <> - required, [] -optional
@@ -45,6 +42,8 @@ class CommandType(str, Enum):
     
     """
 
+class CommandType(str, Enum):  
+    
     send = '/send'
     send_private = '/send_private'
     
@@ -76,3 +75,5 @@ class CommandType(str, Enum):
     error = '/error'
 
     quit = '/quit'
+
+CommandType.__doc__ = DOC

@@ -21,7 +21,7 @@ class SendRequests(Enum):
 
 class HistoryRequests(Enum):
     HISTORY_COMMAND = '1 Global'
-    HISTORY_JSON_REQ = {'command': '/history', 'room': 'Global', 'n': 1}
+    HISTORY_JSON_REQ = {'command': '/history', 'room': 'Global', 'notification_count': 1}
     HISTORY_JSON_RESP = {
         'action': CommandType.history, 'success': True, 'reason': '', 'datetime': test_dt, 'user': 'andre', 
         'payload': { 'history': [SendRequests.SEND_JSON_RESP.value] }
@@ -29,8 +29,8 @@ class HistoryRequests(Enum):
 
     HISTORY_USER_COMMAND = '10'
     HISTORY_USER_DEFAULT_COMMAND = ' '
-    HISTORY_USER_JSON_REQ = {'command': '/history', 'room': '', 'n': 10}
-    HISTORY_USER_DEFAULT_USER_JSON_REQ = {'command': '/history', 'room': '', 'n': 20}
+    HISTORY_USER_JSON_REQ = {'command': '/history', 'room': '', 'notification_count': 10}
+    HISTORY_USER_DEFAULT_USER_JSON_REQ = {'command': '/history', 'room': '', 'notification_count': 20}
     
     HISTORY_USER_DEFAULT_USER_JSON_RESP = {
         'action': CommandType.history, 'success': True, 'reason': '', 'datetime': test_dt, 'user': 'andre', 

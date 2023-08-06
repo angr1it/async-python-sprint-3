@@ -5,7 +5,8 @@ import os
 
 from ..manage_files import send_file
 
-from ..command_types import CommandType
+from ..command_types import CommandType, DOC
+
 from ..exceptions import (
     UnsuitableCommand,
     CommandArgError,
@@ -45,7 +46,7 @@ class HelpCommand(Command):
         if not command == CommandType.help:
             raise UnsuitableCommand
         
-        logger.info(CommandType.__doc__)
+        logger.info(DOC)
         
 class SendCommand(Command):
     @classmethod
@@ -62,7 +63,7 @@ class SendCommand(Command):
         
         try:
             room, message  = content.split(' ', 1)
-        except:
+        except ValueError:
             logger.info(SEND_PARSE_ERR)
             return
         
@@ -83,7 +84,7 @@ class SendPrivateCommand(Command):
         
         try:
             to_user, message  = content.split(' ', 1)
-        except:
+        except ValueError:
             logger.info(SEND_PARSE_ERR)
             return
         
@@ -97,25 +98,21 @@ class HistoryCommand(Command):
         if not command == CommandType.history:
             raise UnsuitableCommand
         
-        n = 20
+        notification_count = 20
         room = ''
-        if content is None or content == '':
+        if not content:
             content = ''
         
-        # Больно смотреть... Вроде работает
         try:
             n_str, room = content.split(' ', 1)
-            n = int(n_str)
-        except ValueError as ex:
+            notification_count = int(n_str)
+        except ValueError:
             try:
-                n = int(content)
-            except:
-                try:
-                    room = content.replace(' ', '')
-                except:
-                    pass
+                notification_count = int(content)
+            except ValueError:
+                room = content.replace(' ', '')
         
-        await websocket.send_json({'command': command, 'room': room, 'n': n})
+        await websocket.send_json({'command': command, 'room': room, 'notification_count': notification_count})
 
 class CreateRoomCommand(Command):
     @classmethod
@@ -127,7 +124,7 @@ class CreateRoomCommand(Command):
         
         try:
             room_name, room_type = content.split(' ', 1)
-        except:
+        except ValueError:
             logger.info(HISTORY_PARSE_ERR)
             return
 
@@ -159,7 +156,7 @@ class AddUserCommand(Command):
         
         try:
             room_name, new_user = content.split(' ', 1)
-        except:
+        except ValueError:
             logger.info(ADD_USER_PARSE_ERR)
             return
 
@@ -175,7 +172,7 @@ class RemoveUserCommand(Command):
         
         try:
             room_name, remove_user = content.split(' ', 1)
-        except:
+        except ValueError:
             logger.info(REMOVE_USER_PARSE_ERR)
             return
 
@@ -191,7 +188,7 @@ class LeaveRoomCommand(Command):
         
         try:
             room_name = content
-        except:
+        except ValueError:
             logger.info(REMOVE_USER_PARSE_ERR)
             return
 
@@ -207,7 +204,7 @@ class RegisterCommand(Command):
         
         try:
             username, password = content.split(' ', 1)
-        except:
+        except ValueError:
             logger.info(REGISTER_PARSE_ERR)
             return
 
@@ -223,7 +220,7 @@ class LoginCommand(Command):
         
         try:
             username, password = content.split(' ', 1)
-        except:
+        except ValueError:
             logger.info(LOGIN_PARSE_ERR)
             return
 

@@ -52,7 +52,7 @@ class HistoryAction(Command):
         
         try:
             room = message_json['room']
-            n = message_json['n']
+            notification_count = message_json['notification_count']
 
         except:
             raise BadRequest
@@ -64,9 +64,9 @@ class HistoryAction(Command):
             if not meta.loggedin:
                 raise NoRegistredUserFound
             
-            await NotificationStore().history_user(ws=ws_response, user=UserStore().get_user(username=meta.user_name), n=n)
+            await NotificationStore().history_user(ws=ws_response, user=UserStore().get_user(username=meta.user_name), n=notification_count)
             return meta
         
-        await NotificationStore().history_room(ws=ws_response, user_name=meta.user_name, room=RoomStore().get_room_by_name(room_name=room), n=n)
+        await NotificationStore().history_room(ws=ws_response, user_name=meta.user_name, room=RoomStore().get_room_by_name(room_name=room), n=notification_count)
 
         return meta

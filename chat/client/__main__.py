@@ -53,7 +53,6 @@ async def handle_input(websocket: WSResponse, input: Coroutine[str, str, str] = 
 
     while True:
         message = await input()
-        print(message)
         try:
             str_command, content = message.split(' ', 1)
         except ValueError:
