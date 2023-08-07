@@ -1,4 +1,3 @@
-from typing import Dict
 import logging
 from datetime import datetime
 
@@ -38,7 +37,7 @@ class LoadFileAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.load_file:
             raise UnsuitableCommand
@@ -95,7 +94,7 @@ class PublishFileAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.publish_file:
             raise UnsuitableCommand

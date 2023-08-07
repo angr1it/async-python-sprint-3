@@ -1,21 +1,18 @@
 import asyncio
 import logging
-from typing import Coroutine
-from aioconsole import ainput
-import asyncio
+
 
 from chat.utils.my_response import WSResponse
-
 from chat.client.client_commands import CommandArgError, EmptyCommand
-
 from chat.command_types import CommandType
 from chat.manage_files import receive_file
 from chat.client.get_commands import init_commands
+from chat.client.console import console_input, console_output
+
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S"
+    format="%(asctime)s - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
 )
 logger = logging.getLogger("client")
 
@@ -25,7 +22,7 @@ DOWNLOADS_FOLDER = "./client_data/downloads"
 async def subscribe_to_messages(websocket: WSResponse) -> None:
     while True:
         data = await websocket.receive_json()
-        logger.info("> Message: %s", data)
+        await console_output(data)
 
         try:
             if data["action"] == CommandType.load_file and data["success"]:
@@ -37,38 +34,23 @@ async def subscribe_to_messages(websocket: WSResponse) -> None:
 
                 logger.info("Loaded.")
 
-        except Exception as ex:
+        except KeyError as ex:
             logger.error(ex)
-            logger.info("File was lost somehow...")
+        # TODO:
+        # except Exception as ex:
+        #     logger.error(ex)
+        #     logger.info("File was lost somehow...")
 
 
-async def ping(websocket) -> None:
-    while True:
-        logger.debug("< PING")
-        await websocket.ping()
-        await asyncio.sleep(60)
-
-
-async def console_input() -> Coroutine[str, str, str]:
-    return await ainput("<<<")
-
-
-async def handle_input(
-    websocket: WSResponse, input: Coroutine[str, str, str] = console_input
-) -> None:
+async def handle_input(websocket: WSResponse) -> None:
     commands = init_commands()
 
     while True:
-        message = await input()
-        try:
-            str_command, content = message.split(" ", 1)
-        except ValueError:
-            str_command = message
-            content = None
+        command, content = await console_input()
 
         try:
-            await commands[CommandType(str_command)].run(
-                ws=websocket, command=str_command, content=content
+            await commands[CommandType(command)].run(
+                ws=websocket, command=command, content=content
             )
         except CommandArgError as ex:
             logger.error(ex)
@@ -84,15 +66,22 @@ async def init_connection():
     return WSResponse(reader=reader, writer=writer)
 
 
-if __name__ == "__main__":
-    loop = asyncio.new_event_loop()
-
-    ws = loop.run_until_complete(init_connection())
-
+async def main():
+    ws = await init_connection()
     tasks = [
-        loop.create_task(handle_input(websocket=ws)),
-        loop.create_task(subscribe_to_messages(websocket=ws)),
+        subscribe_to_messages(websocket=ws),
+        handle_input(websocket=ws),
     ]
+    try:
+        await asyncio.gather(*tasks)
+    except asyncio.CancelledError:
+        ws.close()
+        pass
 
-    loop.run_until_complete(asyncio.wait(tasks))
-    loop.close()
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        # Инче отображает trace, но без ошибки:
+        # ERROR:asyncio:Task was destroyed but it is pending!...
+        print("Exiting...")

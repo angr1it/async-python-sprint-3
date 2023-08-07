@@ -1,5 +1,3 @@
-from typing import Dict
-
 from chat.client.client_commands import (
     Command,
     SendCommand,
@@ -24,8 +22,8 @@ from chat.client.client_commands import (
 from chat.command_types import CommandType
 
 
-def init_commands() -> Dict[CommandType, Command]:
-    commands: Dict[Command] = {}
+def init_commands() -> dict[CommandType, Command]:
+    commands: dict[Command] = {}
 
     commands[CommandType.help] = HelpCommand
 

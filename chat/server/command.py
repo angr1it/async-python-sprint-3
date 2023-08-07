@@ -1,4 +1,3 @@
-from typing import Dict
 import logging
 
 from .state.meta import Meta
@@ -14,6 +13,6 @@ class Command:
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ) -> Meta:
         pass

@@ -1,6 +1,4 @@
-from typing import Dict
 import logging
-from datetime import datetime
 from datetime import datetime
 
 
@@ -9,6 +7,9 @@ from chat.utils.my_response import WSResponse
 from chat.exceptions import (
     UnsuitableCommand,
     BadRequest,
+    UsernameAlreadyInUse,
+    WeakPassword,
+    UsernameUnaceptable
 )
 from chat.server.state.meta import Meta
 from chat.server.state.user import UserStore
@@ -44,7 +45,7 @@ class RegisterAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.register:
             raise UnsuitableCommand
@@ -63,18 +64,21 @@ class RegisterAction(Command):
                 ),
             )
             return meta
-
-        if (
-            UserStore().register(username=username, password=password).username
-            == username
-        ):
-            await NotificationStore().process(
-                ws=ws_response,
-                notification=RegisterAction.__get_notification(
-                    username=username, success=True, reason=""
-                ),
-            )
-            return meta
+        try:
+            if (
+                UserStore().register(
+                    username=username, password=password
+                ).username == username
+            ):
+                await NotificationStore().process(
+                    ws=ws_response,
+                    notification=RegisterAction.__get_notification(
+                        username=username, success=True, reason=""
+                    ),
+                )
+                return meta
+        except (UsernameAlreadyInUse, WeakPassword, UsernameUnaceptable):
+            pass
 
         await NotificationStore().process(
             ws=ws_response,
@@ -108,7 +112,7 @@ class LoginAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.login:
             raise UnsuitableCommand
@@ -159,7 +163,7 @@ class LogoutAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.logout:
             raise UnsuitableCommand

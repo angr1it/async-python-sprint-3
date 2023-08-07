@@ -1,6 +1,5 @@
 from asyncio import StreamReader, StreamWriter
 import json
-from typing import Dict
 
 CHUNK_SIZE = 1024
 END_SIGNAL = b"10101101110111110"
@@ -35,6 +34,7 @@ class WSResponse:
         return json.loads(await self.receive_bytes())
 
     async def send_bytes(self, data: bytes):
+
         for i in range(0, int(len(data) / self.chunk_size) + 1):
             self.writer.write(
                 data[i * self.chunk_size: (i + 1) * self.chunk_size]
@@ -44,6 +44,10 @@ class WSResponse:
         self.writer.write(self.end_signal)
         await self.writer.drain()
 
-    async def send_json(self, data: Dict):
+    async def send_json(self, data: dict):
         bdata = json.dumps(data).encode("utf-8")
         await self.send_bytes(bdata)
+
+    async def close(self):
+        self.writer.close()
+        await self.writer.wait_closed()

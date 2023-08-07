@@ -1,4 +1,3 @@
-from typing import Dict
 import logging
 
 from chat.utils.my_response import WSResponse
@@ -28,7 +27,7 @@ class SendAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.send:
             raise UnsuitableCommand
@@ -67,7 +66,7 @@ class HistoryAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.history:
             raise UnsuitableCommand

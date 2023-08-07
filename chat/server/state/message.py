@@ -1,12 +1,10 @@
-from typing import List, Dict
 import logging
 from datetime import datetime
-from abc import ABC
-from pydantic.dataclasses import dataclass
-from pydantic.tools import parse_obj_as
 import dataclasses
 import json
 
+from pydantic.dataclasses import dataclass
+from pydantic.tools import parse_obj_as
 
 from chat.singleton import singleton
 from chat.command_types import CommandType
@@ -16,12 +14,13 @@ from chat.server.state.user import UserStore, User
 from chat.exceptions import NoRegistredUserFound, NoRoomFound
 from chat.manage_files import read_file, write_file
 
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Action(ABC):
+class Action():
     action: str
     datetime: str
     expired: bool
@@ -29,9 +28,9 @@ class Action(ABC):
     success: bool
     reason: str
 
-    payload: Dict
+    payload: dict
 
-    def get_notification(self) -> Dict:
+    def get_notification(self) -> dict:
         return {
             "action": self.action,
             "datetime": self.datetime,
@@ -45,7 +44,7 @@ class Action(ABC):
 class UserAction(Action):
     user_name: str
 
-    def get_notification(self) -> Dict:
+    def get_notification(self) -> dict:
         return {
             "action": self.action,
             "success": self.success,
@@ -61,7 +60,7 @@ class RoomAction(Action):
     room_name: str
     user_name: str
 
-    def get_notification(self) -> Dict:
+    def get_notification(self) -> dict:
         return {
             "action": self.action,
             "success": self.success,
@@ -81,7 +80,7 @@ class FilePublished(UserAction):
     def __post_init__(self):
         self._command_type_check(CommandType.publish_file)
 
-    def get_notification(self) -> Dict:
+    def get_notification(self) -> dict:
         return {
             "action": CommandType.publish_file,
             "publisher": self.publisher,
@@ -95,7 +94,7 @@ class AnyError(Action):
     def __post_init__(self):
         self._command_type_check(CommandType.error)
 
-    def get_notification(self) -> Dict:
+    def get_notification(self) -> dict:
         return {
             "action": CommandType.error,
             "datetime": self.datetime,
@@ -190,43 +189,40 @@ class NotificationStore:
             except KeyError:
                 self.store["rooms"][room.key] = list()
                 self.store["rooms"][room.key].append(action)
+
             return
 
         self.store["other"].append(action)
 
-    async def __send(self, ws: WSResponse, mssg: Dict):
+    async def __send(self, ws: WSResponse, mssg: dict):
         await ws.send_json(mssg)
 
     async def process(self, ws: WSResponse, notification: Action):
         if issubclass(type(notification), RoomAction):
-            try:
-                if notification.payload["private"]:
-                    if not RoomStore().user_in_room(
-                        username=notification.user_name,
-                        room=RoomStore().find_private_room(
-                            user1=UserStore().get_user(notification.user_name),
-                            user2=UserStore().get_user(
-                                notification.payload["to"]
-                            ),
+            if notification.payload["private"]:
+                if not RoomStore().user_in_room(
+                    username=notification.user_name,
+                    room=RoomStore().find_private_room(
+                        user1=UserStore().get_user(notification.user_name),
+                        user2=UserStore().get_user(
+                            notification.payload["to"]
                         ),
-                    ):
-                        raise NoRegistredUserFound
-                else:
-                    if not RoomStore().user_in_room(
-                        username=notification.user_name,
-                        room=RoomStore().get_room_by_name(
-                            room_name=notification.room_name
-                        ),
-                    ):
-                        raise NoRegistredUserFound
-            except Exception as ex:
-                logger.error(ex)
-                raise NoRegistredUserFound
+                    ),
+                ):
+                    raise NoRegistredUserFound
+            else:
+                if not RoomStore().user_in_room(
+                    username=notification.user_name,
+                    room=RoomStore().get_room_by_name(
+                        room_name=notification.room_name
+                    ),
+                ):
+                    raise NoRegistredUserFound
 
         self.__add(notification)
         await self.__send(ws=ws, mssg=notification.get_notification())
 
-    def get_n_messages(self, room: Room, n: int = 20) -> List:
+    def get_n_messages(self, room: Room, n: int = 20) -> list:
         try:
             messages = [
                 m.get_notification() for m in self.store["rooms"][room.key]
@@ -235,7 +231,7 @@ class NotificationStore:
         except KeyError:
             raise NoRoomFound
 
-    def get_n_notifications_user(self, user: User, n: int = 20) -> List:
+    def get_n_notifications_user(self, user: User, n: int = 20) -> list:
         try:
             notifications = [
                 notification.get_notification()

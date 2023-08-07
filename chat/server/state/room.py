@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
 import uuid
-from typing import List, Dict
 import json
 import logging
 import re
@@ -34,8 +33,8 @@ class Room:
     name: str
     room_type: RoomType
 
-    admins: List[str]
-    allowed: List[str]
+    admins: list[str]
+    allowed: list[str]
 
     deleted: bool
 
@@ -61,7 +60,7 @@ class Room:
 @singleton
 class RoomStore:
     def __init__(self) -> None:
-        self.store: Dict[str, Room] = {}
+        self.store: dict[str, Room] = {}
 
         global_room = Room(
             key=None,
@@ -74,12 +73,12 @@ class RoomStore:
 
         self.store[global_room.key] = global_room
 
-        self.key_by_name: Dict[str, str] = {}
+        self.key_by_name: dict[str, str] = {}
         self.key_by_name[DEFAULT_ROOM] = global_room.key
 
-        self.private_keys: Dict[frozenset, str] = {}
+        self.private_keys: dict[frozenset, str] = {}
 
-        self.user_rooms: Dict[str, List[str]] = {}
+        self.user_rooms: dict[str, list[str]] = {}
 
     def __add_room_to_user(self, usename: str, room: Room) -> None:
         try:
@@ -97,7 +96,7 @@ class RoomStore:
 
         return username in room.allowed
 
-    def get_rooms_by_user(self, user: User) -> List[Room]:
+    def get_rooms_by_user(self, user: User) -> list[Room]:
         try:
             rooms_keys = self.user_rooms[user.username]
             rooms = [
@@ -358,7 +357,7 @@ class RoomStore:
 
         return True
 
-    def __load_store(self, data: Dict):
+    def __load_store(self, data: dict):
         self.store = {}
 
         for room_key, room_data_str in data.items():
@@ -375,17 +374,17 @@ class RoomStore:
             )
             self.store[key] = room
 
-    def __load_key_by_name(self, data: Dict):
+    def __load_key_by_name(self, data: dict):
         for room_name, room_key in data.items():
             self.key_by_name[room_name] = uuid.UUID(room_key)
 
-    def __load_private_keys(self, data: Dict):
+    def __load_private_keys(self, data: dict):
         for pair, room_key in data.items():
             result = re.search("'(.*)', '(.*)'", pair)
             pset = frozenset((result.group(1), result.group(2)))
             self.private_keys[pset] = uuid.UUID(room_key)
 
-    def __load_user_room(self, data: Dict):
+    def __load_user_room(self, data: dict):
         for name, user_data in data.items():
             user_data_list = json.loads(user_data)
             self.user_rooms[name] = [

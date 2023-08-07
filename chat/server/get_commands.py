@@ -1,6 +1,3 @@
-from typing import Dict
-
-
 from chat.command_types import CommandType
 from chat.server.command import Command
 from chat.server.message_actions import (
@@ -28,8 +25,8 @@ from .file_actions import (
 )
 
 
-def init_commands() -> Dict[CommandType, Command]:
-    commands: Dict[Command] = {}
+def init_commands() -> dict[CommandType, Command]:
+    commands: dict[Command] = {}
 
     commands[CommandType.send] = SendAction
     commands[CommandType.history] = HistoryAction

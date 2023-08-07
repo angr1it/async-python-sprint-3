@@ -14,7 +14,7 @@ from chat.server.state.message import get_connected_notification
 class TestMessageStore(unittest.TestCase):
     @freeze_time(test_dt_str)
     def test_message(self):
-        user = User(username="user", password="123")
+        user = User(username="user", hashed_password="123")
 
         room = Room(
             key=None,

@@ -5,3 +5,4 @@ asyncmock
 freezegun
 mock
 pydantic
+argon2-cffi

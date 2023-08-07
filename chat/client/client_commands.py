@@ -22,6 +22,8 @@ from chat.client.command_models import (
     PublishFileModel,
     LoadFileModel,
 )
+from chat.client.console import console_output
+
 
 logger = logging.getLogger()
 
@@ -57,7 +59,7 @@ class HelpCommand(Command):
         if not command == CommandType.help:
             raise UnsuitableCommand
 
-        logger.info(DOC)
+        await console_output(DOC)
 
 
 class SendCommand(Command):

@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from typing import Dict
 import json
 import logging
 import uuid
+
+import argon2
 
 from chat.singleton import singleton
 from chat.manage_files import write_file, read_file, to_dict
@@ -21,10 +22,14 @@ logger = logging.getLogger(__name__)
 @dataclass
 class User:
     username: str
-    password: str
+    hashed_password: bytes
+    hashed: bool = False
 
     def validate(self, password) -> bool:
-        if not password == self.password:
+        if not argon2.verify_password(
+            hash=self.hashed_password,
+            password=bytes(password, encoding='utf-8')
+        ):
             return False
 
         return True
@@ -33,14 +38,20 @@ class User:
         if self.username.startswith("/"):
             raise UsernameUnaceptable
 
-        if len(self.password) < 3:
+        if len(self.hashed_password) < 3:
             raise WeakPassword
+
+        if not self.hashed:
+            self.hashed_password = argon2.hash_password(bytes(
+                self.hashed_password, encoding='utf-8'
+            ))
+            self.hashed = True
 
 
 @singleton
 class UserStore:
     def __init__(self) -> None:
-        self.store: Dict[str, User] = dict()
+        self.store: dict[str, User] = dict()
 
     def get_user(self, username: str) -> User:
         try:
@@ -91,7 +102,10 @@ class UserStore:
         if username in self.store.keys():
             raise UsernameAlreadyInUse
 
-        self.store[username] = User(username=username, password=password)
+        self.store[username] = User(
+            username=username,
+            hashed_password=password
+        )
         return self.store[username]
 
     async def dump(self, path: str = "./data/users.json"):
@@ -107,7 +121,14 @@ class UserStore:
 
             for key, value in data.items():
                 obj = json.loads(value)
-                self.register(obj["username"], obj["password"])
+                self.store[obj["username"]] = User(
+                    username=obj["username"],
+                    hashed_password=bytes(
+                        obj["hashed_password"],
+                        encoding='utf-8'
+                    ),
+                    hashed=True
+                )
 
         except Exception as ex:
             logger.error(f"Unable load users from {path}, because: {ex}.")

@@ -1,6 +1,4 @@
-from typing import Dict
 import logging
-from datetime import datetime
 from datetime import datetime
 
 
@@ -50,7 +48,7 @@ class JoinRoomAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.join_room:
             raise UnsuitableCommand
@@ -113,7 +111,7 @@ class LeaveRoomAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.leave_room:
             raise UnsuitableCommand
@@ -167,7 +165,7 @@ class CreateRoomAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.create_room:
             raise UnsuitableCommand
@@ -240,7 +238,7 @@ class DeleteRoomAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.delete_room:
             raise UnsuitableCommand
@@ -304,7 +302,7 @@ class AddUserAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.add_user:
             raise UnsuitableCommand
@@ -384,7 +382,7 @@ class RemoveUserAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.remove_user:
             raise UnsuitableCommand
@@ -452,7 +450,7 @@ class OpenDialogueAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.open_dialogue:
             raise UnsuitableCommand
@@ -532,7 +530,7 @@ class DeleteDialogueAction(Command):
         ws_response: WSResponse,
         meta: Meta,
         command: str = None,
-        message_json: Dict[str, str] = None,
+        message_json: dict[str, str] = None,
     ):
         if not command == CommandType.delete_dialogue:
             raise UnsuitableCommand

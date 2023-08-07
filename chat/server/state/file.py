@@ -1,7 +1,6 @@
 import logging
 from dataclasses import dataclass
 import uuid
-from typing import Dict
 
 from chat.singleton import singleton
 from chat.manage_files import receive_file
@@ -22,7 +21,7 @@ class File:
 @singleton
 class FileStore:
     def __init__(self) -> None:
-        self.store: Dict[str, File] = {}
+        self.store: dict[str, File] = {}
 
     def get_file(self, key: str) -> File:
         try:

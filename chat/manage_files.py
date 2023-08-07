@@ -3,7 +3,6 @@ import aiofiles
 from aiofiles.os import makedirs
 from pathlib import Path
 import json
-from typing import Dict
 import dataclasses
 import logging
 
@@ -13,6 +12,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+class BytesEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, bytes):
+            return obj.decode('utf-8')
+        return json.JSONEncoder.default(self, obj)
+
+
 async def write_file(filepath: str, data: str):
     dir = str(Path(filepath).parent)
     await makedirs(dir, exist_ok=True)
@@ -20,17 +26,19 @@ async def write_file(filepath: str, data: str):
         await f.write(data)
 
 
-async def read_file(filepath) -> Dict:
+async def read_file(filepath) -> dict:
     async with aiofiles.open(file=filepath, mode="r") as f:
         data = await f.read()
 
     return json.loads(data)
 
 
-def to_dict(data: Dict[str, dataclasses.dataclass]):
+def to_dict(data: dict[str, dataclasses.dataclass]):
     out = dict()
     for key, value in data.items():
-        out[key] = json.dumps(dataclasses.asdict(value), indent=4)
+        out[key] = json.dumps(
+            dataclasses.asdict(value), indent=4, cls=BytesEncoder
+        )
 
     return out
 
