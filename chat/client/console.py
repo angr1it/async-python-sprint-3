@@ -19,6 +19,7 @@ async def console_output(message):
     print(message)
 
     # TODO:
+    
     # Не получается использовать aprint()
     # Может чего-то не понимаю. Проблема следующая:
     # Если вызвать в event_loop сперва await ainput: он
@@ -27,4 +28,3 @@ async def console_output(message):
     # после чего await ainput перестает откликаться.
     # https://github.com/vxgmichel/aioconsole/issues/47#issuecomment-464040281
     # тут не про это, но в целом о том, что могут быть проблемы...
-    # либо, я не правильно испольую

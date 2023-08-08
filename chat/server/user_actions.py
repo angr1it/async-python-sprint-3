@@ -9,11 +9,16 @@ from chat.exceptions import (
     BadRequest,
     UsernameAlreadyInUse,
     WeakPassword,
-    UsernameUnaceptable
+    UsernameUnaceptable,
+    CloseSession
 )
 from chat.server.state.meta import Meta
 from chat.server.state.user import UserStore
-from chat.server.state.message import NotificationStore, UserAction, Action
+from chat.server.state.message import (
+    NotificationStore,
+    UserAction,
+    Action
+)
 from chat.server.command import Command
 
 logger = logging.getLogger()
@@ -157,6 +162,19 @@ class LoginAction(Command):
 
 
 class LogoutAction(Command):
+
+    @staticmethod
+    def get_logout(success: bool, reason: str, user_name: str):
+        return UserAction(
+            action=CommandType.logout,
+            datetime=str(datetime.now()),
+            expired=False,
+            success=success,
+            reason=reason,
+            user_name=user_name,
+            payload={},
+        )
+
     @classmethod
     async def run(
         cls,
@@ -171,15 +189,11 @@ class LogoutAction(Command):
         if not meta.loggedin:
             await NotificationStore().process(
                 ws=ws_response,
-                notification=UserAction(
-                    action=CommandType.logout,
-                    datetime=str(datetime.now()),
-                    expired=False,
+                notification=LogoutAction.get_logout(
                     success=False,
-                    reason=ALREADY_LOGGED_OUT,
-                    user_name=meta.user_name,
-                    payload={},
-                ),
+                    reason=ALREADY_LOGGED_IN,
+                    user_name=meta.user_name
+                )
             )
             return meta
 
@@ -190,16 +204,27 @@ class LogoutAction(Command):
 
             await NotificationStore().process(
                 ws=ws_response,
-                notification=UserAction(
-                    action=CommandType.logout,
-                    datetime=str(datetime.now()),
-                    expired=False,
+                notification=LogoutAction.get_logout(
                     success=True,
-                    reason="",
-                    user_name=user_before,
-                    payload={},
-                ),
+                    reason='',
+                    user_name=user_before
+                )
             )
             return meta
 
         raise BadRequest
+
+
+class QuitAction(Command):
+    @classmethod
+    async def run(
+        cls,
+        ws_response: WSResponse,
+        meta: Meta,
+        command: str = None,
+        message_json: dict[str, str] = None,
+    ):
+        if not command == CommandType.quit:
+            raise UnsuitableCommand
+
+        raise CloseSession

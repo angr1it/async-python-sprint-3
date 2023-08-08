@@ -73,6 +73,22 @@ class RoomAction(Action):
 
 
 @dataclass
+class PrivateRoomAction(Action):
+    room_name: str
+    user_name: str
+
+    def get_notification(self) -> dict:
+        return {
+            "action": self.action,
+            "success": self.success,
+            "reason": self.reason,
+            "datetime": self.datetime,
+            "user": self.user_name,
+            "payload": self.payload,
+        }
+
+
+@dataclass
 class FilePublished(UserAction):
     publisher: str
     key: str
@@ -86,19 +102,6 @@ class FilePublished(UserAction):
             "publisher": self.publisher,
             "key": self.key,
             "datetime": self.datetime,
-        }
-
-
-@dataclass
-class AnyError(Action):
-    def __post_init__(self):
-        self._command_type_check(CommandType.error)
-
-    def get_notification(self) -> dict:
-        return {
-            "action": CommandType.error,
-            "datetime": self.datetime,
-            "reason": self.reason,
         }
 
 
@@ -116,6 +119,23 @@ def get_connected_notification(name: str) -> Action:
 def get_message_notification(
     room_name, user_name, success, reason, private, to, message
 ):
+    # понимаю, что лучше переделать через pydemic
+    # оставляю так, за нехваткой времени.
+    if private:
+        return PrivateRoomAction(
+            action=CommandType.send,
+            datetime=str(datetime.now()),
+            expired=False,
+            success=success,
+            reason=reason,
+            payload={
+                "private": True,
+                "to": to,
+                "message": message
+            },
+            user_name=user_name,
+            room_name=''
+        )
     return RoomAction(
         action=CommandType.send,
         datetime=str(datetime.now()),
@@ -124,7 +144,7 @@ def get_message_notification(
         reason=reason,
         room_name=room_name,
         user_name=user_name,
-        payload={"private": private, "to": to, "message": message},
+        payload={"private": False, "to": to, "message": message},
     )
 
 
@@ -198,26 +218,27 @@ class NotificationStore:
         await ws.send_json(mssg)
 
     async def process(self, ws: WSResponse, notification: Action):
+
+        store = RoomStore()
+
+        if issubclass(type(notification), PrivateRoomAction):
+            user = UserStore().get_user(notification.user_name)
+            to = UserStore().get_user(notification.payload["to"])
+
+            if not store.user_in_room(
+                    username=notification.user_name,
+                    room=store.find_private_room(user, to)
+            ):
+                raise NoRegistredUserFound
+
         if issubclass(type(notification), RoomAction):
-            if notification.payload["private"]:
-                if not RoomStore().user_in_room(
-                    username=notification.user_name,
-                    room=RoomStore().find_private_room(
-                        user1=UserStore().get_user(notification.user_name),
-                        user2=UserStore().get_user(
-                            notification.payload["to"]
-                        ),
-                    ),
-                ):
-                    raise NoRegistredUserFound
-            else:
-                if not RoomStore().user_in_room(
-                    username=notification.user_name,
-                    room=RoomStore().get_room_by_name(
-                        room_name=notification.room_name
-                    ),
-                ):
-                    raise NoRegistredUserFound
+            if not store.user_in_room(
+                username=notification.user_name,
+                room=store.get_room_by_name(
+                    room_name=notification.room_name
+                ),
+            ):
+                raise NoRegistredUserFound
 
         self.__add(notification)
         await self.__send(ws=ws, mssg=notification.get_notification())

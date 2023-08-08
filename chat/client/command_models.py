@@ -87,3 +87,7 @@ class PublishFileModel(BaseModel):
 class LoadFileModel(BaseModel):
     command: CommandType = CommandType.load_file
     key: str
+
+
+class QuitModel(BaseModel):
+    command: CommandType = CommandType.quit

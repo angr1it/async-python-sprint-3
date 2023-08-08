@@ -52,3 +52,7 @@ class NotAuthorized(Exception):
 
 class NoRoomFound(Exception):
     pass
+
+
+class CloseSession(Exception):
+    pass

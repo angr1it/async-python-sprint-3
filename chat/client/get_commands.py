@@ -22,8 +22,8 @@ from chat.client.client_commands import (
 from chat.command_types import CommandType
 
 
-def init_commands() -> dict[CommandType, Command]:
-    commands: dict[Command] = {}
+def init_commands() -> dict[CommandType, type[Command]]:
+    commands: dict[CommandType, type[Command]] = {}
 
     commands[CommandType.help] = HelpCommand
 

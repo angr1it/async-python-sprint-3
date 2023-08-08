@@ -21,6 +21,7 @@ from chat.client.command_models import (
     DeleteDialogueModel,
     PublishFileModel,
     LoadFileModel,
+    QuitModel
 )
 from chat.client.console import console_output
 
@@ -77,7 +78,7 @@ class SendCommand(Command):
 
         try:
             room, message = content.split(" ", 1)
-        except ValueError:
+        except (ValueError, AttributeError):
             logger.info(SEND_PARSE_ERR)
             return
 
@@ -101,7 +102,7 @@ class SendPrivateCommand(Command):
 
         try:
             to_user, message = content.split(" ", 1)
-        except ValueError:
+        except (ValueError, AttributeError):
             logger.info(SEND_PARSE_ERR)
             return
 
@@ -126,7 +127,7 @@ class HistoryCommand(Command):
         try:
             n_str, room = content.split(" ", 1)
             notification_count = int(n_str)
-        except ValueError:
+        except (ValueError, AttributeError):
             try:
                 notification_count = int(content)
             except ValueError:
@@ -148,7 +149,7 @@ class CreateRoomCommand(Command):
         try:
             room_name, room_type = content.split(" ", 1)
 
-        except ValueError:
+        except (ValueError, AttributeError):
             logger.info(HISTORY_PARSE_ERR)
             return
 
@@ -180,7 +181,7 @@ class AddUserCommand(Command):
 
         try:
             room_name, new_user = content.split(" ", 1)
-        except ValueError:
+        except (ValueError, AttributeError):
             logger.info(ADD_USER_PARSE_ERR)
             return
 
@@ -199,7 +200,7 @@ class RemoveUserCommand(Command):
 
         try:
             room_name, remove_user = content.split(" ", 1)
-        except ValueError:
+        except (ValueError, AttributeError):
             logger.info(REMOVE_USER_PARSE_ERR)
             return
 
@@ -237,7 +238,7 @@ class RegisterCommand(Command):
 
         try:
             username, password = content.split(" ", 1)
-        except ValueError:
+        except (ValueError, AttributeError):
             logger.info(REGISTER_PARSE_ERR)
             return
 
@@ -256,7 +257,7 @@ class LoginCommand(Command):
 
         try:
             username, password = content.split(" ", 1)
-        except ValueError:
+        except (ValueError, AttributeError):
             logger.info(LOGIN_PARSE_ERR)
             return
 
@@ -284,6 +285,7 @@ class QuitCommand(Command):
         if not command == CommandType.quit:
             raise UnsuitableCommand
 
+        await ws.send_json(QuitModel().model_dump())
         raise KeyboardInterrupt
 
 

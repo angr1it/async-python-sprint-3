@@ -7,7 +7,8 @@ from chat.server.message_actions import (
 from chat.server.user_actions import (
     LoginAction,
     LogoutAction,
-    RegisterAction
+    RegisterAction,
+    QuitAction
 )
 from chat.server.room_actions import (
     OpenDialogueAction,
@@ -25,8 +26,8 @@ from .file_actions import (
 )
 
 
-def init_commands() -> dict[CommandType, Command]:
-    commands: dict[Command] = {}
+def init_commands() -> dict[CommandType, type[Command]]:
+    commands: dict[CommandType, type[Command]] = {}
 
     commands[CommandType.send] = SendAction
     commands[CommandType.history] = HistoryAction
@@ -46,5 +47,7 @@ def init_commands() -> dict[CommandType, Command]:
 
     commands[CommandType.load_file] = LoadFileAction
     commands[CommandType.publish_file] = PublishFileAction
+
+    commands[CommandType.quit] = QuitAction
 
     return commands

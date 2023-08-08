@@ -1,6 +1,5 @@
 import aiounittest
 from unittest.mock import MagicMock
-import uuid
 from freezegun import freeze_time
 
 
@@ -35,23 +34,15 @@ class TestServerActions(aiounittest.AsyncTestCase):
         self.mock_ws = MagicMock()
         self.mock_ws.send_json = AsyncMock()
 
-        self.meta_anon = Meta(
-            key=uuid.uuid4(), user_name="anonymus_12314", loggedin=False
-        )
+        self.meta_anon = Meta(user_name="anonymus_12314", loggedin=False)
 
         self.user1 = UserStore().register(username="user1", password="123")
         self.user2 = UserStore().register(username="user2", password="123")
         self.user3 = UserStore().register(username="user3", password="123")
 
-        self.meta_user1 = Meta(
-            key=uuid.uuid4(), user_name=self.user1.username, loggedin=True
-        )
-        self.meta_user2 = Meta(
-            key=uuid.uuid4(), user_name=self.user2.username, loggedin=True
-        )
-        self.meta_user3 = Meta(
-            key=uuid.uuid4(), user_name=self.user3.username, loggedin=True
-        )
+        self.meta_user1 = Meta(user_name=self.user1.username, loggedin=True)
+        self.meta_user2 = Meta(user_name=self.user2.username, loggedin=True)
+        self.meta_user3 = Meta(user_name=self.user3.username, loggedin=True)
 
     def tearDown(self) -> None:
         singleton.instances = {}

@@ -1,6 +1,5 @@
 import aiounittest
 from unittest.mock import MagicMock
-import uuid
 from freezegun import freeze_time
 
 from chat.utils.async_mock import AsyncMock
@@ -28,9 +27,7 @@ class TestServerActions(aiounittest.AsyncTestCase):
         self.mock_ws.send_json = AsyncMock()
 
         user = UserStore().register(username="andre", password="123")
-        self.meta = Meta(
-            key=uuid.uuid4(), user_name=user.username, loggedin=True
-        )
+        self.meta = Meta(user_name=user.username, loggedin=True)
 
     def tearDown(self) -> None:
         singleton.instances = {}

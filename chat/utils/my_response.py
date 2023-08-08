@@ -1,6 +1,8 @@
 from asyncio import StreamReader, StreamWriter
 import json
 
+from chat.exceptions import BadRequest
+
 CHUNK_SIZE = 1024
 END_SIGNAL = b"10101101110111110"
 
@@ -31,7 +33,10 @@ class WSResponse:
                 return data[: -1 * len(self.end_signal)]
 
     async def receive_json(self):
-        return json.loads(await self.receive_bytes())
+        try:
+            return json.loads(await self.receive_bytes())
+        except json.decoder.JSONDecodeError:
+            raise BadRequest
 
     async def send_bytes(self, data: bytes):
 

@@ -1,11 +1,9 @@
 import aiounittest
 from unittest.mock import MagicMock
-import uuid
 
 
 from freezegun import freeze_time
 from mock import patch
-import argon2
 
 from chat.server.state.user import UserStore
 from chat.server.user_actions import RegisterAction, LoginAction, LogoutAction
@@ -31,7 +29,6 @@ class TestServerActions(aiounittest.AsyncTestCase):
         self.mock_ws.send_json = AsyncMock()
 
         self.meta = Meta(
-            key=uuid.uuid4(),
             user_name="anonymus_12314",
             loggedin=False
         )
@@ -60,7 +57,7 @@ class TestServerActions(aiounittest.AsyncTestCase):
     @freeze_time(test_dt_str)
     @patch('argon2.verify_password')
     async def test_login_logout(self, verify_password):
-        
+
         await RegisterAction().run(
             ws_response=self.mock_ws,
             meta=self.meta,
@@ -68,7 +65,7 @@ class TestServerActions(aiounittest.AsyncTestCase):
             message_json=RegisterRequests.JSON_REQ.value,
         )
 
-        verify_password.return_value = False # noqa: F841
+        verify_password.return_value = False  # noqa: F841
         await LoginAction().run(
             ws_response=self.mock_ws,
             meta=self.meta,
@@ -83,7 +80,7 @@ class TestServerActions(aiounittest.AsyncTestCase):
             )
         )
 
-        verify_password.return_value = True # noqa: F841
+        verify_password.return_value = True  # noqa: F841
         await LoginAction().run(
             ws_response=self.mock_ws,
             meta=self.meta,
@@ -100,7 +97,7 @@ class TestServerActions(aiounittest.AsyncTestCase):
             LoginRequests.JSON_RESP.value
         ))
 
-        verify_password.return_value = True # noqa: F841
+        verify_password.return_value = True  # noqa: F841
         await LoginAction().run(
             ws_response=self.mock_ws,
             meta=self.meta,
